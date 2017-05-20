@@ -2,9 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ne2der.github.io/2017/05/20/EXP-cve-2016-5342/</loc>
+    
+    <lastmod>2017-05-20T08:38:04.988Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ne2der.github.io/2017/05/13/syscalltable-hook-for-Android-arm64/</loc>
     
-    <lastmod>2017-05-19T05:14:14.729Z</lastmod>
+    <lastmod>2017-05-20T06:21:26.114Z</lastmod>
     
   </url>
   

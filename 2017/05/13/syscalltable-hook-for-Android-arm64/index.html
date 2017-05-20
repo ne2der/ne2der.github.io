@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Android,HOOK,ARM64," />
+  <meta name="keywords" content="HOOK,ARM64," />
 
 
 
@@ -93,14 +93,14 @@
 
 
 <meta name="description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
-<meta name="keywords" content="Android,HOOK,ARM64">
+<meta name="keywords" content="HOOK,ARM64">
 <meta property="og:type" content="article">
 <meta property="og:title" content="syscalltable hook for Android arm64">
 <meta property="og:url" content="http://ne2der.github.io/2017/05/13/syscalltable-hook-for-Android-arm64/index.html">
 <meta property="og:site_name" content="ne2der">
 <meta property="og:description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
 <meta property="og:image" content="http://ne2der.github.io/images/syscalltable_hook_for_Android_arm64_syscallmemory.png">
-<meta property="og:updated_time" content="2017-05-19T05:14:14.729Z">
+<meta property="og:updated_time" content="2017-05-20T06:21:26.114Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="syscalltable hook for Android arm64">
 <meta name="twitter:description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
@@ -327,6 +327,28 @@
           </span>
 
           
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
 
           
             
@@ -417,8 +439,6 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Android/" rel="tag"># Android</a>
-          
             <a href="/tags/HOOK/" rel="tag"># HOOK</a>
           
             <a href="/tags/ARM64/" rel="tag"># ARM64</a>
@@ -430,6 +450,22 @@
         
       
 
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/20/EXP-cve-2016-5342/" rel="prev" title="EXP学习--CVE-2016-5342">
+                EXP学习--CVE-2016-5342 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
       
 
       
@@ -498,12 +534,21 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-count">2</span>
                 <span class="site-state-item-name">posts</span>
               </a>
             </div>
           
 
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-name">categories</span>
+              
+            </div>
           
 
           
@@ -511,7 +556,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">tags</span>
               </a>
             </div>
