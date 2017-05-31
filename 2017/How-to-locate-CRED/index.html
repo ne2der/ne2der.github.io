@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="HOOK,ARM64," />
+  <meta name="keywords" content="EXP,Android," />
 
 
 
@@ -92,19 +92,20 @@
 
 
 
-<meta name="description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
-<meta name="keywords" content="HOOK,ARM64">
+<meta name="description" content="[EXPTECH]__How to locate cred1.where is credscreds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。 因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread">
+<meta name="keywords" content="EXP,Android">
 <meta property="og:type" content="article">
-<meta property="og:title" content="syscalltable hook for Android arm64">
-<meta property="og:url" content="http://ne2der.github.io/2017/syscalltable-hook-for-Android-arm64/index.html">
+<meta property="og:title" content="How-to-locate-CRED">
+<meta property="og:url" content="http://ne2der.github.io/2017/How-to-locate-CRED/index.html">
 <meta property="og:site_name" content="ne2der">
-<meta property="og:description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
-<meta property="og:image" content="http://ne2der.github.io/images/syscalltable_hook_for_Android_arm64_syscallmemory.png">
-<meta property="og:updated_time" content="2017-05-20T06:21:26.114Z">
+<meta property="og:description" content="[EXPTECH]__How to locate cred1.where is credscreds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。 因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread">
+<meta property="og:image" content="http://ne2der.github.io/images/task_stack.png">
+<meta property="og:image" content="http://ne2der.github.io/images/task_list.jpg">
+<meta property="og:updated_time" content="2017-05-31T12:02:07.478Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="syscalltable hook for Android arm64">
-<meta name="twitter:description" content="终于克服了拖延症写下了第一笔，前段时间看了Hooking Android System Calls for Pleasure and Benefit，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。 定制内核首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的">
-<meta name="twitter:image" content="http://ne2der.github.io/images/syscalltable_hook_for_Android_arm64_syscallmemory.png">
+<meta name="twitter:title" content="How-to-locate-CRED">
+<meta name="twitter:description" content="[EXPTECH]__How to locate cred1.where is credscreds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。 因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread">
+<meta name="twitter:image" content="http://ne2der.github.io/images/task_stack.png">
 
 
 
@@ -132,13 +133,13 @@
 
 
 
-  <link rel="canonical" href="http://ne2der.github.io/2017/syscalltable-hook-for-Android-arm64/"/>
+  <link rel="canonical" href="http://ne2der.github.io/2017/How-to-locate-CRED/"/>
 
 
 
 
 
-  <title>syscalltable hook for Android arm64 | ne2der</title>
+  <title>How-to-locate-CRED | ne2der</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="en">
@@ -287,7 +288,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/syscalltable-hook-for-Android-arm64/">
+    <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/How-to-locate-CRED/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ne2der">
@@ -304,7 +305,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">syscalltable hook for Android arm64</h1>
+          <h1 class="post-title" itemprop="name headline">How-to-locate-CRED</h1>
         
 
         <div class="post-meta">
@@ -316,8 +317,8 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-13T13:55:21+08:00">
-                2017-05-13
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-31T18:42:21+08:00">
+                2017-05-31
               </time>
             
 
@@ -327,28 +328,6 @@
           </span>
 
           
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android/" itemprop="url" rel="index">
-                    <span itemprop="name">Android</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
 
           
             
@@ -357,7 +336,7 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a class="cloud-tie-join-count" href="/2017/syscalltable-hook-for-Android-arm64/#comments" itemprop="discussionUrl">
+                <a class="cloud-tie-join-count" href="/2017/How-to-locate-CRED/#comments" itemprop="discussionUrl">
                   <span class="post-comments-count join-count" itemprop="commentCount"></span>
                 </a>
               </span>
@@ -414,12 +393,25 @@
       
 
       
-        <p>终于克服了拖延症写下了第一笔，前段时间看了<a href="https://www.vantagepoint.sg/blog/82-hooking-android-system-calls-for-pleasure-and-benefit" target="_blank" rel="external">Hooking Android System Calls for Pleasure and Benefit</a>，于是就自己尝试着写了一下，综合了其他的思路改用动态获取sys_call_table的方法。思路简单，主要记录下遇到的问题。</p>
-<h2 id="定制内核"><a href="#定制内核" class="headerlink" title="定制内核"></a>定制内核</h2><p>首先，为了必须使Kernel支持LKM，上文中给出的方法是在编译内核make defconfig之后，修改源码目录中的.config文件。这种方法修改的选项make时会被override。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">scripts/kconfig/conf --silentoldconfig Kconfig</div><div class="line">.config:214:warning: override: reassigning to symbol MODULES</div><div class="line">#</div><div class="line"># configuration written to .config</div><div class="line">#</div></pre></td></tr></table></figure></p>
-<p>回去看.config文件的已经被恢复，实际上选项并没有生效。更简单的方法是修改<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">arch/platform(arm/arm64/……)/Kconfig</div></pre></td></tr></table></figure></p>
-<p>在其中将MODULES，MODULE_UNLOAD添加到default y项中<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">config ARM</div><div class="line">        bool</div><div class="line">        default y</div><div class="line">        select MODULES</div><div class="line">        select MODULE_UNLOAD</div><div class="line">        select ARCH_BINFMT_ELF_RANDOMIZE_PIE</div><div class="line">        select ARCH_HAS_ATOMIC64_DEC_IF_POSITIVE</div><div class="line">        select ARCH_HAVE_CUSTOM_GPIO_H</div><div class="line">        select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST</div><div class="line">        select ARCH_WANT_IPC_PARSE_VERSION</div><div class="line">        ……</div><div class="line">        ……</div></pre></td></tr></table></figure></p>
-<h2 id="定位sys-call-table"><a href="#定位sys-call-table" class="headerlink" title="定位sys_call_table"></a>定位sys_call_table</h2><p>sys_call_table地址的获取方法有多种，如上文采用的/proc/kallsym读取的方法，还以从system.map读。这些方法原理已经已经很多，就不多说了。<br>这里我采用的是用sys_close偏移定位的方法。这种方法的原理是从PAGE_OFFSET开始暴力查找，从每一个地址找NR_close偏移处存储的是否是sys_close来判断当前地址是否是sys_call_table。测试过程中arm一切正常，但是在arm64下却会crash。经过一段时间的排查发现。arm64下由于进行arm兼容，多了一张compat_sys_call_table的表。在内存中它们的位置关系如下。<br><img src="/images/syscalltable_hook_for_Android_arm64_syscallmemory.png" alt="compat_sys_call_in_memory"><br>两张表中存储sys_close的相同，查找程序会先找到compat表中的sys_close,并且由于arm与arm64的系统调用号不同(查看对应的unistd.h确定)，所以找到的地址既不是compat_sys_call_table也不是sys_call_table。根据内存的情况，扩展原来的定位方法，首先用arm的调用号确定compat_sys_call_table地址，在跳过这个地址继续暴力查找，用arm64的调用号确定sys_call_table的地址。</p>
-<p>测试环境：android kernel 3.10 arm64<br>丑陋Code：<a href="https://github.com/ne2der/ASyScallHookFrame" target="_blank" rel="external">ASyScallHookFrame</a></p>
+        <h1 id="EXPTECH-How-to-locate-cred"><a href="#EXPTECH-How-to-locate-cred" class="headerlink" title="[EXPTECH]__How to locate cred"></a>[EXPTECH]__How to locate cred</h1><h2 id="1-where-is-creds"><a href="#1-where-is-creds" class="headerlink" title="1.where is creds"></a>1.where is creds</h2><p>creds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。</p>
+<p>因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread_union,<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">union</span> thread_union &#123;</div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> <span class="title">thread_info</span>;</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="built_in">stack</span>[THREAD_SIZE/<span class="keyword">sizeof</span>(<span class="keyword">long</span>)];</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>因此，thread_info内存布局如图<br><img src="/images/task_stack.png" alt="task_stack"></p>
+<p>thread_info结构体的task字段即该进程的task_struct结构体指针<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> &#123;</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span>		flags;		<span class="comment">/* low level flags */</span></div><div class="line">	<span class="keyword">mm_segment_t</span>		addr_limit;	<span class="comment">/* address limit */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>	*<span class="title">task</span>;</span>		<span class="comment">/* main task structure */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">exec_domain</span>	*<span class="title">exec_domain</span>;</span>	<span class="comment">/* execution domain */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">restart_block</span>	<span class="title">restart_block</span>;</span></div><div class="line">	<span class="keyword">int</span>			preempt_count;	<span class="comment">/* 0 =&gt; preemptable, &lt;0 =&gt; bug */</span></div><div class="line">	<span class="keyword">int</span>			cpu;		<span class="comment">/* cpu */</span></div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>thread_info中还有一个比较重要的字段addr_limit，表示该进程能可以访问的内存范围，exp中通常也用修改这个字段获取全部内存的操作权限。<br>另外，THREAD_SIZE在arm与arm64中size不同，因此在定位thread_info时有一些差异。</p>
+<ul>
+<li>arm</li>
+</ul>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in  arch/arm/include/asm/page.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> PAGE_SIZE		(_AC(1,UL) &lt;&lt; PAGE_SHIFT)</span></div><div class="line"></div><div class="line"><span class="comment">//define in arch/arm/include/asm/thread_info.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE_ORDER	1</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE		(PAGE_SIZE &lt;&lt; THREAD_SIZE_ORDER)</span></div></pre></td></tr></table></figure>
+<ul>
+<li>arm64</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in arch/arm64/include/asm/thread_info.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE		16384</span></div></pre></td></tr></table></figure>
+<h2 id="2-如何查找creds"><a href="#2-如何查找creds" class="headerlink" title="2.如何查找creds"></a>2.如何查找creds</h2><p>根据上面的creds位置，通常有两种查找creds的方法，<br>方法一:<br>如果获取到sp，就可以反推到thread_info的头部，也就可以找到进程的task_struct结构体。事实上，kernel也是通过这种方式定位thread_info结构体的。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in arch/arm(arm64)/include/asm/thread_info.h</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> struct thread_info *<span class="title">current_thread_info</span><span class="params">(<span class="keyword">void</span>)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">return</span> (struct thread_info *)</div><div class="line">		(current_stack_pointer &amp; ~(THREAD_SIZE - <span class="number">1</span>));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>只要带入对应的THREAD_SIZE即可。简化就是<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">thread_addr = sp &amp; <span class="number">0xFFFFFFFFFFFFC000</span>  <span class="comment">//for arm64</span></div><div class="line">thread_addr = sp &amp; <span class="number">0xFFFFE000</span>          <span class="comment">//for arm</span></div></pre></td></tr></table></figure></p>
+<p>然后知道thread_info,task_struct的结构<br>通过<br>thread_into-&gt;task_struct-&gt;cred<br>即可找到cred</p>
+<p>方法二：<br>如果内核sp没有泄露，就只好遍历task_struct链表了，在task_struct结构体中有一个task字段，这个字段时一个双向链表，系统中运行的所有进程都在这个链表中，通常的方法是先定位idle的task_struct(也就是第一个task_struct,这个task_struct是静态分配的，存在于kernel的data段)。然后从这个task_struct遍历所有task_struct,通过其中的特征字段如comm，查找指定的进程的task_struct</p>
+<p><img src="/images/task_list.jpg" alt="task_list"></p>
+<p>ref:<br><a href="https://geneblue.github.io/2016/07/27/Android%20PXN%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF%E7%A0%94%E7%A9%B6/" target="_blank" rel="external">Android pxn 绕过技术</a></p>
 
       
     </div>
@@ -449,9 +441,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/HOOK/" rel="tag"># HOOK</a>
+            <a href="/tags/EXP/" rel="tag"># EXP</a>
           
-            <a href="/tags/ARM64/" rel="tag"># ARM64</a>
+            <a href="/tags/Android/" rel="tag"># Android</a>
           
         </div>
       
@@ -464,15 +456,15 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2017/EXP-cve-2016-5342/" rel="next" title="EXP学习--CVE-2016-5342">
+                <i class="fa fa-chevron-left"></i> EXP学习--CVE-2016-5342
+              </a>
+            
           </div>
 
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/EXP-cve-2016-5342/" rel="prev" title="EXP学习--CVE-2016-5342">
-                EXP学习--CVE-2016-5342 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -639,7 +631,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#定制内核"><span class="nav-number">1.</span> <span class="nav-text">定制内核</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#定位sys-call-table"><span class="nav-number">2.</span> <span class="nav-text">定位sys_call_table</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#EXPTECH-How-to-locate-cred"><span class="nav-number">1.</span> <span class="nav-text">[EXPTECH]__How to locate cred</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-where-is-creds"><span class="nav-number">1.1.</span> <span class="nav-text">1.where is creds</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-如何查找creds"><span class="nav-number">1.2.</span> <span class="nav-text">2.如何查找creds</span></a></li></ol></li></ol></div>
             
 
           </div>

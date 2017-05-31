@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-05-20T09:49:55.416Z</updated>
+  <updated>2017-05-31T12:02:07.478Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -14,6 +14,47 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>How-to-locate-CRED</title>
+    <link href="http://ne2der.github.io/2017/How-to-locate-CRED/"/>
+    <id>http://ne2der.github.io/2017/How-to-locate-CRED/</id>
+    <published>2017-05-31T10:42:21.000Z</published>
+    <updated>2017-05-31T12:02:07.478Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="EXPTECH-How-to-locate-cred"><a href="#EXPTECH-How-to-locate-cred" class="headerlink" title="[EXPTECH]__How to locate cred"></a>[EXPTECH]__How to locate cred</h1><h2 id="1-where-is-creds"><a href="#1-where-is-creds" class="headerlink" title="1.where is creds"></a>1.where is creds</h2><p>creds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。</p>
+<p>因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread_union,<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">union</span> thread_union &#123;</div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> <span class="title">thread_info</span>;</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="built_in">stack</span>[THREAD_SIZE/<span class="keyword">sizeof</span>(<span class="keyword">long</span>)];</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>因此，thread_info内存布局如图<br><img src="/images/task_stack.png" alt="task_stack"></p>
+<p>thread_info结构体的task字段即该进程的task_struct结构体指针<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> &#123;</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span>		flags;		<span class="comment">/* low level flags */</span></div><div class="line">	<span class="keyword">mm_segment_t</span>		addr_limit;	<span class="comment">/* address limit */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>	*<span class="title">task</span>;</span>		<span class="comment">/* main task structure */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">exec_domain</span>	*<span class="title">exec_domain</span>;</span>	<span class="comment">/* execution domain */</span></div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">restart_block</span>	<span class="title">restart_block</span>;</span></div><div class="line">	<span class="keyword">int</span>			preempt_count;	<span class="comment">/* 0 =&gt; preemptable, &lt;0 =&gt; bug */</span></div><div class="line">	<span class="keyword">int</span>			cpu;		<span class="comment">/* cpu */</span></div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>thread_info中还有一个比较重要的字段addr_limit，表示该进程能可以访问的内存范围，exp中通常也用修改这个字段获取全部内存的操作权限。<br>另外，THREAD_SIZE在arm与arm64中size不同，因此在定位thread_info时有一些差异。</p>
+<ul>
+<li>arm</li>
+</ul>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in  arch/arm/include/asm/page.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> PAGE_SIZE		(_AC(1,UL) &lt;&lt; PAGE_SHIFT)</span></div><div class="line"></div><div class="line"><span class="comment">//define in arch/arm/include/asm/thread_info.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE_ORDER	1</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE		(PAGE_SIZE &lt;&lt; THREAD_SIZE_ORDER)</span></div></pre></td></tr></table></figure>
+<ul>
+<li>arm64</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in arch/arm64/include/asm/thread_info.h</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD_SIZE		16384</span></div></pre></td></tr></table></figure>
+<h2 id="2-如何查找creds"><a href="#2-如何查找creds" class="headerlink" title="2.如何查找creds"></a>2.如何查找creds</h2><p>根据上面的creds位置，通常有两种查找creds的方法，<br>方法一:<br>如果获取到sp，就可以反推到thread_info的头部，也就可以找到进程的task_struct结构体。事实上，kernel也是通过这种方式定位thread_info结构体的。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//define in arch/arm(arm64)/include/asm/thread_info.h</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> struct thread_info *<span class="title">current_thread_info</span><span class="params">(<span class="keyword">void</span>)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">return</span> (struct thread_info *)</div><div class="line">		(current_stack_pointer &amp; ~(THREAD_SIZE - <span class="number">1</span>));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>只要带入对应的THREAD_SIZE即可。简化就是<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">thread_addr = sp &amp; <span class="number">0xFFFFFFFFFFFFC000</span>  <span class="comment">//for arm64</span></div><div class="line">thread_addr = sp &amp; <span class="number">0xFFFFE000</span>          <span class="comment">//for arm</span></div></pre></td></tr></table></figure></p>
+<p>然后知道thread_info,task_struct的结构<br>通过<br>thread_into-&gt;task_struct-&gt;cred<br>即可找到cred</p>
+<p>方法二：<br>如果内核sp没有泄露，就只好遍历task_struct链表了，在task_struct结构体中有一个task字段，这个字段时一个双向链表，系统中运行的所有进程都在这个链表中，通常的方法是先定位idle的task_struct(也就是第一个task_struct,这个task_struct是静态分配的，存在于kernel的data段)。然后从这个task_struct遍历所有task_struct,通过其中的特征字段如comm，查找指定的进程的task_struct</p>
+<p><img src="/images/task_list.jpg" alt="task_list"></p>
+<p>ref:<br><a href="https://geneblue.github.io/2016/07/27/Android%20PXN%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF%E7%A0%94%E7%A9%B6/" target="_blank" rel="external">Android pxn 绕过技术</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;EXPTECH-How-to-locate-cred&quot;&gt;&lt;a href=&quot;#EXPTECH-How-to-locate-cred&quot; class=&quot;headerlink&quot; title=&quot;[EXPTECH]__How to locate cred&quot;&gt;&lt;/a&gt;[EXPT
+    
+    </summary>
+    
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
+    
+      <category term="Android" scheme="http://ne2der.github.io/tags/Android/"/>
+    
+  </entry>
   
   <entry>
     <title>EXP学习--CVE-2016-5342</title>
