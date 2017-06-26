@@ -1,0 +1,828 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="EXP,Android," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="ne2der" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="[EXPTECH]__Get symbols from Android kernel image0x0 为什么需要从kernel image文件提取符号在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。 代码位置">
+<meta name="keywords" content="EXP,Android">
+<meta property="og:type" content="article">
+<meta property="og:title" content="get_symbol_from_kernel_img">
+<meta property="og:url" content="http://ne2der.github.io/2017/get-symbol-from-kernel-img/index.html">
+<meta property="og:site_name" content="ne2der">
+<meta property="og:description" content="[EXPTECH]__Get symbols from Android kernel image0x0 为什么需要从kernel image文件提取符号在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。 代码位置">
+<meta property="og:updated_time" content="2017-06-26T09:38:38.414Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="get_symbol_from_kernel_img">
+<meta name="twitter:description" content="[EXPTECH]__Get symbols from Android kernel image0x0 为什么需要从kernel image文件提取符号在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。 代码位置">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"always","offset":12,"offset_float":0,"b2t":true,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://ne2der.github.io/2017/get-symbol-from-kernel-img/"/>
+
+
+
+
+
+  <title>get_symbol_from_kernel_img | ne2der</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d0447087442e9f62e5108751fed9526b";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ne2der</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Know Yourself</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/get-symbol-from-kernel-img/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ne2der">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ne2der">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">get_symbol_from_kernel_img</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-26T14:16:52+08:00">
+                2017-06-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/2017/get-symbol-from-kernel-img/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Words count in article</span>
+                
+                <span title="Words count in article">
+                  
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Reading time</span>
+                
+                <span title="Reading time">
+                  
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="EXPTECH-Get-symbols-from-Android-kernel-image"><a href="#EXPTECH-Get-symbols-from-Android-kernel-image" class="headerlink" title="[EXPTECH]__Get symbols from Android kernel image"></a>[EXPTECH]__Get symbols from Android kernel image</h1><h2 id="0x0-为什么需要从kernel-image文件提取符号"><a href="#0x0-为什么需要从kernel-image文件提取符号" class="headerlink" title="0x0 为什么需要从kernel image文件提取符号"></a>0x0 为什么需要从kernel image文件提取符号</h2><p>在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。</p>
+<p>代码位置kernel: lib/vsprintf.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">case</span> <span class="string">'K'</span>:</div><div class="line">		<span class="comment">/*</span></div><div class="line">		 * %pK cannot be used in IRQ context because its test</div><div class="line">		 * for CAP_SYSLOG would be meaningless.</div><div class="line">		 */</div><div class="line">		<span class="keyword">if</span> (kptr_restrict &amp;&amp; (in_irq() || in_serving_softirq() ||</div><div class="line">				      in_nmi())) &#123;</div><div class="line">			<span class="keyword">if</span> (spec.field_width == <span class="number">-1</span>)</div><div class="line">				spec.field_width = default_width;</div><div class="line">			<span class="keyword">return</span> <span class="built_in">string</span>(buf, end, <span class="string">"pK-error"</span>, spec);</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> (!((kptr_restrict == <span class="number">0</span>) ||</div><div class="line">		      (kptr_restrict == <span class="number">1</span> &amp;&amp;</div><div class="line">		       has_capability_noaudit(current, CAP_SYSLOG))))  <span class="comment">//when kptr_restrict ==1 ， symbols will be hidden</span></div><div class="line">			ptr = <span class="literal">NULL</span>;</div><div class="line">		<span class="keyword">break</span>;</div></pre></td></tr></table></figure>
+<p>所以，现在读取kallsyms中的内容会发现所有的符号地址都是0，通过下面的命令可以关闭kptr_restrict。<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">echo</span> 0 &gt; /proc/sys/kernel/kptr_restrict</div></pre></td></tr></table></figure></p>
+<p>然而，</p>
+<p>这条命令需要root权限，很可能我们是没有root权限的。因此，尝试直接从kernel image中提取符号，并且在N以及N之前的内核中并没有开启KALSR（下个版本就KALSR了），因此，提取到的地址就是符号真实的地址。</p>
+<h2 id="0x01-手动定位"><a href="#0x01-手动定位" class="headerlink" title="0x01 手动定位"></a>0x01 手动定位</h2><p>   在学习的过程中发现了<a href="http://bbs.pediy.com/thread-194803.htm" target="_blank" rel="external">android手机内核提取及逆向分析</a>,文章提供了一种手动搜索的符号地址的方法。我测试了几个符号的查找，发现并不是所有的符号字符串都可以在内核镜像文件中查找到。比如，在下图ida中加载的image文件的string窗口中（已经按string排序）可以看到，有sys_close,却没有sys_clone。查了才知道原来符号字符串是压缩存储的。<br>   <a href="/images/get_symbol_from_kernel_img/stringinimg.png">!ida</a></p>
+<p>   为了提取所有的符号，那么可以模拟kallsyms提取内核符号的过程将符号还原即可。</p>
+<h2 id="0x02-分析kallsyms"><a href="#0x02-分析kallsyms" class="headerlink" title="0x02 分析kallsyms"></a>0x02 分析kallsyms</h2><p>代码位置kernel： kernel/kallsyms.c<br>相关的关键函数是kallsyms_lookup_name,这个函数传入一个符号名，返回这个符号的地址<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="title">kallsyms_lookup_name</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *name)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">char</span> namebuf[KSYM_NAME_LEN];</div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> i;</div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">int</span> off;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>, off = <span class="number">0</span>; i &lt; kallsyms_num_syms; i++) &#123;</div><div class="line">		off = kallsyms_expand_symbol(off, namebuf, ARRAY_SIZE(namebuf));  <span class="comment">//decompress symbol name</span></div><div class="line"></div><div class="line">		<span class="keyword">if</span> (<span class="built_in">strcmp</span>(namebuf, name) == <span class="number">0</span>)</div><div class="line">			<span class="keyword">return</span> kallsyms_addresses[i];      <span class="comment">//return symbol address</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> module_kallsyms_lookup_name(name);   <span class="comment">//try to find symbol in LKM</span></div><div class="line">&#125;</div><div class="line">EXPORT_SYMBOL_GPL(kallsyms_lookup_name);</div></pre></td></tr></table></figure></p>
+<p>kalsyms_lookup_name查找符号的步骤是:</p>
+<ul>
+<li>1.遍历所有的符号（kallsyms_num_syms即内核符号数量）</li>
+<li>2.比较是否要查找的符号</li>
+<li>3.是 返回kallsyms_addresses中对应的地址，否继续</li>
+<li>4.如果遍历完也没找到，尝试查找LKM中的符号</li>
+</ul>
+<p>从这个函数可以得出有一张存放内核符号地址的表kallsyms_addresses和一张存放内核符号名的表，这两张表的内容的顺序存在对应关系，也就是内核符号名表的第那n个符号对应内核符号地址表的第n个地址。kallsyms_expand_symbol就是用来解析内核符号名表获取符号名的。继续分析，<br>代码位置kernel： kernel/kallsyms.c<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="title">kallsyms_expand_symbol</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">int</span> off,</span></span></div><div class="line">					   <span class="keyword">char</span> *result, <span class="keyword">size_t</span> maxlen)</div><div class="line">&#123;</div><div class="line">	<span class="keyword">int</span> len, skipped_first = <span class="number">0</span>;</div><div class="line">	<span class="keyword">const</span> u8 *tptr, *data;</div><div class="line"></div><div class="line">	<span class="comment">/* Get the compressed symbol length from the first symbol byte. */</span></div><div class="line">	data = &amp;kallsyms_names[off];</div><div class="line">	len = *data;</div><div class="line">	data++;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Update the offset to return the offset for the next symbol on</div><div class="line">	 * the compressed stream.</div><div class="line">	 */</div><div class="line">	off += len + <span class="number">1</span>;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * For every byte on the compressed symbol data, copy the table</div><div class="line">     * entry for that byte.</div><div class="line">	 */</div><div class="line">	<span class="keyword">while</span> (len) &#123;</div><div class="line">		tptr = &amp;kallsyms_token_table[kallsyms_token_index[*data]];</div><div class="line">		data++;</div><div class="line">		len--;</div><div class="line"></div><div class="line">		<span class="keyword">while</span> (*tptr) &#123;</div><div class="line">			<span class="keyword">if</span> (skipped_first) &#123;</div><div class="line">				<span class="keyword">if</span> (maxlen &lt;= <span class="number">1</span>)</div><div class="line">					<span class="keyword">goto</span> tail;</div><div class="line">				*result = *tptr;</div><div class="line">				result++;</div><div class="line">				maxlen--;</div><div class="line">			&#125; <span class="keyword">else</span></div><div class="line">				skipped_first = <span class="number">1</span>;</div><div class="line">			tptr++;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">tail:</div><div class="line">	<span class="keyword">if</span> (maxlen)</div><div class="line">		*result = <span class="string">'\0'</span>;</div><div class="line"></div><div class="line">	<span class="comment">/* Return to offset to the next symbol. */</span></div><div class="line">	<span class="keyword">return</span> off;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>很明显kallsyms_expand_symbol就是用来还原字符串的，函数逻辑比较绕，进行了多次索引。</p>
+<p>过程是（以符号_text为例）：</p>
+<ul>
+<li>1.从kallsyms_names[off]读出第一个字节，值为n，这个字节代表符号名的分片个数（<em>text被分为   <em>__</em></em> ,t,ext共3片存储，最前面还存放一个type信息共4个部分，n为4)</li>
+<li>2.kallsyms_names[off]之后的第n个字节的值对应该分片的索引在kallsyms_token_index中的偏移，在kallsyms_token_index中取出这个索引index[n]。</li>
+<li>3.index[n]代表这个分片在kallsyms_token_table表中的偏移，这个表中存储的就是分片的实际内容了。以0作为分片的结尾</li>
+<li>4.取出所有分片后拼接在一起，就是 symtype(1byte)+symstring(nbyte),取后n个byte就是符号名了</li>
+</ul>
+<p>画个图好了<br><a href="/images/get_symbol_from_kernel_img/kallsyms.png">!symbol_index</a></p>
+<h2 id="0x03-代码获取image中的符号"><a href="#0x03-代码获取image中的符号" class="headerlink" title="0x03 代码获取image中的符号"></a>0x03 代码获取image中的符号</h2><p>现在知道如何获取内核符号名以及内核符号地址了，剩下问题就在于如何从Image中定位四张表，在符号地址中有三个连续的符号的地址都是0xffffffc000081000，在kallsyms中可以看到这三个符号如下图<br><a href="/images/get_symbol_from_kernel_img/magic_81000.png">!magic-address</a></p>
+<p>从image文件中定位，三个连续的ffffffc000081000，即可找到kallsyms_addresses表，从这个位置向前查找到第一个不为0的位置，就是kallsyms_addresses表的首地址。<br><a href="/images/get_symbol_from_kernel_img/ffffffc000081000.png">!magic_address_in_img</a></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">magic_addr = [<span class="string">"00100800c0ffffff00100800c0ffffff00100800c0ffffff"</span>]</div><div class="line">……</div><div class="line">loc = img.find(magic_addr[<span class="number">0</span>].decode(<span class="string">"hex"</span>))</div><div class="line">    <span class="keyword">if</span> loc == <span class="number">-1</span>:</div><div class="line">        <span class="keyword">print</span> <span class="string">"can not find magic_addr to locate addresses list head"</span></div><div class="line">        <span class="keyword">return</span></div><div class="line">    addresses = struct.unpack_from(<span class="string">"&lt;Q"</span>, img, loc)</div><div class="line">    offset = <span class="number">0</span></div><div class="line"></div><div class="line">    <span class="comment">#find address list start through magic address</span></div><div class="line">    <span class="keyword">while</span> addresses[<span class="number">0</span>]:</div><div class="line">        offset = offset + <span class="number">1</span></div><div class="line">        <span class="keyword">if</span> loc + offset * <span class="number">8</span> &gt;= len(img):</div><div class="line">            <span class="keyword">print</span> <span class="string">"can not find end of addresses list"</span></div><div class="line">            <span class="keyword">return</span></div><div class="line">        addresses = struct.unpack_from(<span class="string">"&lt;Q"</span>, img, loc - offset * <span class="number">8</span>)</div><div class="line">    <span class="comment"># print hex(addresses[0])</span></div><div class="line">    addresses_offset = loc - <span class="number">8</span> * (offset - <span class="number">1</span>)</div><div class="line">    <span class="keyword">print</span> <span class="string">"addresses list start at offset %x"</span> % addresses_offset</div></pre></td></tr></table></figure>
+<p>kallsyms_addresses表结束后，有两个字节存放kallsyms_num_syms,然后依次是kallsym_names ,markers ,kallsym_token_index ,kallsym_token_tables ,各个部分之间通过长度不定的00分割，因此找到一张表的末尾之后，跳过0就是下一张表的首地址。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">while</span> addresses[<span class="number">0</span>] &gt; <span class="number">0xffffffc000000000</span>:</div><div class="line">    offset = offset + <span class="number">1</span></div><div class="line">    <span class="keyword">if</span> loc + offset * <span class="number">8</span> &gt;= len(img):</div><div class="line">        <span class="keyword">print</span> <span class="string">"can not find end of addresses list"</span></div><div class="line">        <span class="keyword">return</span></div><div class="line">    addresses = struct.unpack_from(<span class="string">"&lt;Q"</span>, img, loc + offset * <span class="number">8</span>)</div><div class="line"></div><div class="line"><span class="comment">#skip zero between address_list and sym_num </span></div><div class="line"><span class="keyword">while</span> addresses[<span class="number">0</span>] == <span class="number">0</span>:</div><div class="line">    offset = offset + <span class="number">1</span></div><div class="line">    <span class="keyword">if</span> loc + offset * <span class="number">8</span> &gt;= len(img):</div><div class="line">        <span class="keyword">print</span> <span class="string">"can not find end of addresses list"</span></div><div class="line">        <span class="keyword">return</span></div><div class="line">    addresses = struct.unpack_from(<span class="string">"&lt;I"</span>, img, loc + offset * <span class="number">8</span>)</div><div class="line"></div><div class="line"></div><div class="line">loc = loc + offset*<span class="number">8</span></div><div class="line">sym_num = addresses[<span class="number">0</span>]</div><div class="line"><span class="keyword">print</span> <span class="string">"sym num %d "</span> % sym_num</div></pre></td></tr></table></figure></p>
+<p>注：markers这张表用于probe，本文获取内核符号时并不需要用到</p>
+<p>完整code：<a href="https://github.com/ne2der/ANDROID_EXPTOOLKIT/tree/master/SymExtractor" target="_blank" rel="external">边测边写，丑到无法直视</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/EXP/" rel="tag"># EXP</a>
+          
+            <a href="/tags/Android/" rel="tag"># Android</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/How-to-locate-CRED/" rel="next" title="How-to-locate-CRED">
+                <i class="fa fa-chevron-left"></i> How-to-locate-CRED
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="ne2der" />
+          <p class="site-author-name" itemprop="name">ne2der</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-name">posts</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-name">categories</span>
+              
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">5</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/ne2der" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://anhkgg.github.io/" title="anhkgg" target="_blank">anhkgg</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://sec-wiki.com/" title="Sec-Wiki" target="_blank">Sec-Wiki</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#EXPTECH-Get-symbols-from-Android-kernel-image"><span class="nav-number">1.</span> <span class="nav-text">[EXPTECH]__Get symbols from Android kernel image</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x0-为什么需要从kernel-image文件提取符号"><span class="nav-number">1.1.</span> <span class="nav-text">0x0 为什么需要从kernel image文件提取符号</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x01-手动定位"><span class="nav-number">1.2.</span> <span class="nav-text">0x01 手动定位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x02-分析kallsyms"><span class="nav-number">1.3.</span> <span class="nav-text">0x02 分析kallsyms</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x03-代码获取image中的符号"><span class="nav-number">1.4.</span> <span class="nav-text">0x03 代码获取image中的符号</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+        <div class="back-to-top">
+          <i class="fa fa-arrow-up"></i>
+          
+        </div>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ne2der</span>
+</div>
+
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "d788838eac294619b0514e3c53bd420f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
