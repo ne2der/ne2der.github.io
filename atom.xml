@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-06-26T09:45:33.508Z</updated>
+  <updated>2017-06-26T09:46:41.432Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="http://ne2der.github.io/2017/get-symbol-from-kernel-img/"/>
     <id>http://ne2der.github.io/2017/get-symbol-from-kernel-img/</id>
     <published>2017-06-26T06:16:52.000Z</published>
-    <updated>2017-06-26T09:45:33.508Z</updated>
+    <updated>2017-06-26T09:46:41.432Z</updated>
     
     <content type="html"><![CDATA[<h1 id="EXPTECH-Get-symbols-from-Android-kernel-image"><a href="#EXPTECH-Get-symbols-from-Android-kernel-image" class="headerlink" title="[EXPTECH]__Get symbols from Android kernel image"></a>[EXPTECH]__Get symbols from Android kernel image</h1><h2 id="0x0-为什么需要从kernel-image文件提取符号"><a href="#0x0-为什么需要从kernel-image文件提取符号" class="headerlink" title="0x0 为什么需要从kernel image文件提取符号"></a>0x0 为什么需要从kernel image文件提取符号</h2><p>在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。</p>
 <p>代码位置kernel: lib/vsprintf.c</p>
