@@ -404,7 +404,7 @@
 <li>1.从kallsyms_names[off]读出第一个字节，值为n，这个字节代表符号名的分片个数（<em>text被分为   <em>__</em></em> ,t,ext共3片存储，最前面还存放一个type信息共4个部分，n为4)</li>
 <li>2.kallsyms_names[off]之后的第n个字节的值对应该分片的索引在kallsyms_token_index中的偏移，在kallsyms_token_index中取出这个索引index[n]。</li>
 <li>3.index[n]代表这个分片在kallsyms_token_table表中的偏移，这个表中存储的就是分片的实际内容了。以0作为分片的结尾</li>
-<li>4.取出所有分片后拼接在一起，就是 symtype(1byte)+symstring(nbyte),取后n个byte就是符号名了</li>
+<li>4.取出所有分片后拼接在一起，就是 symtype(1byte)+symstring(mbyte),取后n个byte就是符号名了</li>
 </ul>
 <p>画个图好了<br><img src="/images/kallsyms.png" alt="symbol_index"></p>
 <h2 id="0x03-代码获取image中的符号"><a href="#0x03-代码获取image中的符号" class="headerlink" title="0x03 代码获取image中的符号"></a>0x03 代码获取image中的符号</h2><p>现在知道如何获取内核符号名以及内核符号地址了，剩下问题就在于如何从Image中定位四张表，在符号地址中有三个连续的符号的地址都是0xffffffc000081000，在kallsyms中可以看到这三个符号如下图<br><img src="/images/magic_81000.png" alt="magic-address"></p>
