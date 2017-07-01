@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ne2der.github.io/2017/EXP-cve-2016-2434/</loc>
+    
+    <lastmod>2017-07-01T06:45:54.336Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ne2der.github.io/2017/get-symbol-from-kernel-img/</loc>
     
     <lastmod>2017-06-27T07:44:39.283Z</lastmod>
