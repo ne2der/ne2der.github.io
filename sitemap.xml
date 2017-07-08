@@ -2,6 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ne2der.github.io/2017/EXPTECH-Extract-Image-from-bootimg/</loc>
+    
+    <lastmod>2017-07-08T08:01:12.718Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://ne2der.github.io/2017/How-to-locate-CRED/</loc>
+    
+    <lastmod>2017-07-08T07:09:22.991Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://ne2der.github.io/2017/get-symbol-from-kernel-img/</loc>
+    
+    <lastmod>2017-07-08T07:09:07.863Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ne2der.github.io/tags/index.html</loc>
     
     <lastmod>2017-07-07T02:26:19.469Z</lastmod>
@@ -19,20 +40,6 @@
     <loc>http://ne2der.github.io/2017/EXP-cve-2016-2434/</loc>
     
     <lastmod>2017-07-01T06:45:54.336Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://ne2der.github.io/2017/get-symbol-from-kernel-img/</loc>
-    
-    <lastmod>2017-06-27T07:44:39.283Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://ne2der.github.io/2017/How-to-locate-CRED/</loc>
-    
-    <lastmod>2017-05-31T12:02:07.478Z</lastmod>
     
   </url>
   

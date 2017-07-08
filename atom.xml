@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-07-01T06:45:54.336Z</updated>
+  <updated>2017-07-08T08:01:12.718Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -14,6 +14,56 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>[EXPTECH]__Extract_Image_from_bootimg</title>
+    <link href="http://ne2der.github.io/2017/EXPTECH-Extract-Image-from-bootimg/"/>
+    <id>http://ne2der.github.io/2017/EXPTECH-Extract-Image-from-bootimg/</id>
+    <published>2017-07-08T07:05:58.000Z</published>
+    <updated>2017-07-08T08:01:12.718Z</updated>
+    
+    <content type="html"><![CDATA[<p>之前写了如何从kernel Image文件中静态提取符号地址，后来就有就有朋友问道image文件怎么得到。其实这个已经有很多前辈总结过了。就简单说先</p>
+<h2 id="获取boot-img"><a href="#获取boot-img" class="headerlink" title="获取boot.img"></a>获取boot.img</h2><p>boot.img 一般有两种方法拿到：</p>
+<ul>
+<li>1.从厂商提供的刷机包中提取<br>  这种方法很直观，介绍略</li>
+<li><p>2.从手机中提取<br>  首先在手机中找到boot对应的分区</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">ls /dev/block/platform/&lt;soc&gt;/by-name  |grep boot</div></pre></td></tr></table></figure>
+<p>  然后用dd命令将对应分区dump出来即可<br>  可以参考<a href="http://blog.csdn.net/QQ1084283172/article/details/57074695" target="_blank" rel="external">从Android设备中提取内核和逆向分析</a></p>
+</li>
+</ul>
+<h2 id="解包boot-img"><a href="#解包boot-img" class="headerlink" title="解包boot.img"></a>解包boot.img</h2><p>在Android源码中已经给出了boot.img的结构<br>代码位置： /system/core/mkbootimg/bootimg.h<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">boot_img_hdr</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">uint8_t</span> magic[BOOT_MAGIC_SIZE];</div><div class="line">    <span class="keyword">uint32_t</span> kernel_size;  <span class="comment">/* size in bytes */</span></div><div class="line">    <span class="keyword">uint32_t</span> kernel_addr;  <span class="comment">/* physical load addr */</span></div><div class="line">    <span class="keyword">uint32_t</span> ramdisk_size; <span class="comment">/* size in bytes */</span></div><div class="line">    <span class="keyword">uint32_t</span> ramdisk_addr; <span class="comment">/* physical load addr */</span></div><div class="line">    <span class="keyword">uint32_t</span> second_size;  <span class="comment">/* size in bytes */</span></div><div class="line">    <span class="keyword">uint32_t</span> second_addr;  <span class="comment">/* physical load addr */</span></div><div class="line">    <span class="keyword">uint32_t</span> tags_addr;    <span class="comment">/* physical addr for kernel tags */</span></div><div class="line">    <span class="keyword">uint32_t</span> page_size;    <span class="comment">/* flash page size we assume */</span></div><div class="line">    <span class="keyword">uint32_t</span> unused;       <span class="comment">/* reserved for future expansion: MUST be 0 */</span></div><div class="line">    <span class="comment">/* operating system version and security patch level; for</span></div><div class="line">     * version "A.B.C" and patch level "Y-M-D":</div><div class="line">     * ver = A &lt;&lt; 14 | B &lt;&lt; 7 | C         (7 bits for each of A, B, C)</div><div class="line">     * lvl = ((Y - 2000) &amp; 127) &lt;&lt; 4 | M  (7 bits for Y, 4 bits for M)</div><div class="line">     * os_version = ver &lt;&lt; 11 | lvl */</div><div class="line">    <span class="keyword">uint32_t</span> os_version;</div><div class="line">    <span class="keyword">uint8_t</span> name[BOOT_NAME_SIZE]; <span class="comment">/* asciiz product name */</span></div><div class="line">    <span class="keyword">uint8_t</span> cmdline[BOOT_ARGS_SIZE];</div><div class="line">    <span class="keyword">uint32_t</span> id[<span class="number">8</span>]; <span class="comment">/* timestamp / checksum / sha1 / etc */</span></div><div class="line">    <span class="comment">/* Supplemental command line data; kept here to maintain</span></div><div class="line">     * binary compatibility with older versions of mkbootimg */</div><div class="line">    <span class="keyword">uint8_t</span> extra_cmdline[BOOT_EXTRA_ARGS_SIZE];</div><div class="line">&#125; __attribute__((packed));</div><div class="line"><span class="comment">/*</span></div><div class="line">** +-----------------+</div><div class="line">** | boot header     | 1 page</div><div class="line">** +-----------------+</div><div class="line">** | kernel          | n pages</div><div class="line">** +-----------------+</div><div class="line">** | ramdisk         | m pages</div><div class="line">** +-----------------+</div><div class="line">** | second stage    | o pages</div><div class="line">** +-----------------+</div><div class="line">**</div><div class="line">** n = (kernel_size + page_size - 1) / page_size</div><div class="line">** m = (ramdisk_size + page_size - 1) / page_size</div><div class="line">** o = (second_size + page_size - 1) / page_size</div><div class="line">**</div><div class="line">** 0. all entities are page_size aligned in flash</div><div class="line">** 1. kernel and ramdisk are required (size != 0)</div><div class="line">** 2. second is optional (second_size == 0 -&gt; no second)</div><div class="line">** 3. load each element (kernel, ramdisk, second) at</div><div class="line">**    the specified physical address (kernel_addr, etc)</div><div class="line">** 4. prepare tags at tag_addr.  kernel_args[] is</div><div class="line">**    appended to the kernel commandline in the tags.</div><div class="line">** 5. r0 = 0, r1 = MACHINE_TYPE, r2 = tags_addr</div><div class="line">** 6. if second_size != 0: jump to second_addr</div><div class="line">**    else: jump to kernel_addr</div><div class="line">*/</div></pre></td></tr></table></figure></p>
+<p>所以，首先解析boot header<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">getimghead</span><span class="params">(self)</span>:</span></div><div class="line">        self.imghead.MAGICNUM = self.imgdata[<span class="number">0</span>:<span class="number">8</span>]</div><div class="line">        self.imghead.kernel_size,\</div><div class="line">        self.imghead.kernel_addr,\</div><div class="line">        self.imghead.ramdisk_size,\</div><div class="line">        self.imghead.ramdisk_addr,\</div><div class="line">        self.imghead.second_size,\</div><div class="line">        self.imghead.ramdisk_addr,\</div><div class="line">        self.imghead.tags_addr,\</div><div class="line">        self.imghead.page_size,\</div><div class="line">        self.imghead.unused,\</div><div class="line">        self.imghead.os_version = struct.unpack_from(<span class="string">'10I'</span>, self.imgdata, <span class="number">8</span>)</div><div class="line">        self.imghead.name,self.imghead.cmdline = struct.unpack_from(<span class="string">'16s512s'</span>,self.imgdata,<span class="number">48</span>)</div><div class="line">        self.imghead.id =  struct.unpack_from(<span class="string">"32s"</span>,self.imgdata,<span class="number">576</span>)[<span class="number">0</span>].encode(<span class="string">'hex'</span>)[:<span class="number">40</span>]</div><div class="line">        self.imghead.extra_cmdline = struct.unpack_from(<span class="string">'1024s'</span>,self.imgdata,<span class="number">608</span>)</div></pre></td></tr></table></figure></p>
+<p>取得page_size,从第二个page开始读取kernel_size就可以获取到kernel文件了，但是取得的kernel有可能是压缩过的。还需要进一步处理</p>
+<p>这里大致介绍一下kernel image文件的类型，首先编译出来的kernel是vmlinux,这是一个elf文件，但是由于kernel加载进内存执行的时候系统几乎还是一片空白的状态，是不能解析elf的。所以通常都用objcopy将vmlinux转换成bin文件，后面考虑到size问题，有可能还需要进行压缩。通常Android的kernel有这几种：</p>
+<ul>
+<li>Image    -&gt; vmlinux objcopy之后的bin文件</li>
+<li>Image.gz -&gt; vmlinux objcopy之后的bin文件 再进行gzip压缩  (在bootloader阶段解压)  </li>
+<li>zImage   -&gt; vmlinux objcopy之后的bin文件 再进行gzip压缩 再在前面部署自解压代码 （bootloader调用自解压代码解压）</li>
+<li>XXX-dtb  -&gt; 带有dtb后缀的kernel文件，是在后面追加了device tree数据的kernel</li>
+</ul>
+<p>Image.gz实际上就是一个gzip文件，以\1f\8b\08开头<br>zImage 以8个\00\00\a0\e1开头，前面是自解压代码，image.gz文件接在后面，可以用\1f\8b\08定位<br>(PS:dtb数据的magic num是 \d0\0d\fe\ed)</p>
+<p>定位到压缩后的kernel后 提取出来解压就得到Image文件了。</p>
+<hr>
+<p>code：<a href="https://github.com/ne2der/ANDROID_EXPTOOLKIT/tree/master/auxiliary_tools/ImgExtractor" target="_blank" rel="external">ImgExtractor</a></p>
+<p>同时把ramdisk.img也提取了，用cpio处理即可</p>
+<p>kernel文件静态分析的部分，就暂时告一段落，后面开始写bypass技术。</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;之前写了如何从kernel Image文件中静态提取符号地址，后来就有就有朋友问道image文件怎么得到。其实这个已经有很多前辈总结过了。就简单说先&lt;/p&gt;
+&lt;h2 id=&quot;获取boot-img&quot;&gt;&lt;a href=&quot;#获取boot-img&quot; class=&quot;headerlin
+    
+    </summary>
+    
+      <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
+    
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
+    
+      <category term="Android" scheme="http://ne2der.github.io/tags/Android/"/>
+    
+  </entry>
   
   <entry>
     <title>EXP学习--CVE-2016-2434</title>
@@ -63,7 +113,7 @@
     <link href="http://ne2der.github.io/2017/get-symbol-from-kernel-img/"/>
     <id>http://ne2der.github.io/2017/get-symbol-from-kernel-img/</id>
     <published>2017-06-26T06:16:52.000Z</published>
-    <updated>2017-06-27T07:44:39.283Z</updated>
+    <updated>2017-07-08T07:09:07.863Z</updated>
     
     <content type="html"><![CDATA[<h1 id="EXPTECH-Get-symbols-from-Android-kernel-image"><a href="#EXPTECH-Get-symbols-from-Android-kernel-image" class="headerlink" title="[EXPTECH]__Get symbols from Android kernel image"></a>[EXPTECH]__Get symbols from Android kernel image</h1><h2 id="0x0-为什么需要从kernel-image文件提取符号"><a href="#0x0-为什么需要从kernel-image文件提取符号" class="headerlink" title="0x0 为什么需要从kernel image文件提取符号"></a>0x0 为什么需要从kernel image文件提取符号</h2><p>在进行Android内核exp的时候，常常都需要用到内核符号和它们的地址。linux的/proc/kallsyms中可以找到这些符号的名字和地址，但是这些符号在目前的Android系统中都是被kptr_restrict机制block掉的。</p>
 <p>代码位置kernel: lib/vsprintf.c</p>
@@ -105,6 +155,8 @@
     
     </summary>
     
+      <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
+    
     
       <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
     
@@ -117,7 +169,7 @@
     <link href="http://ne2der.github.io/2017/How-to-locate-CRED/"/>
     <id>http://ne2der.github.io/2017/How-to-locate-CRED/</id>
     <published>2017-05-31T10:42:21.000Z</published>
-    <updated>2017-05-31T12:02:07.478Z</updated>
+    <updated>2017-07-08T07:09:22.991Z</updated>
     
     <content type="html"><![CDATA[<h1 id="EXPTECH-How-to-locate-cred"><a href="#EXPTECH-How-to-locate-cred" class="headerlink" title="[EXPTECH]__How to locate cred"></a>[EXPTECH]__How to locate cred</h1><h2 id="1-where-is-creds"><a href="#1-where-is-creds" class="headerlink" title="1.where is creds"></a>1.where is creds</h2><p>creds结构提保存在进程的task_struct结构体中，task_struct结构体比较长，不贴出来了，task_struct结构体定义在/include/linux/sched.h中。</p>
 <p>因此要定位creds结构体，就要定位到task_struct结构体，linux内核为每一个进程都分配了一个thread_union,<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">union</span> thread_union &#123;</div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> <span class="title">thread_info</span>;</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="built_in">stack</span>[THREAD_SIZE/<span class="keyword">sizeof</span>(<span class="keyword">long</span>)];</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
@@ -145,6 +197,8 @@
       &lt;h1 id=&quot;EXPTECH-How-to-locate-cred&quot;&gt;&lt;a href=&quot;#EXPTECH-How-to-locate-cred&quot; class=&quot;headerlink&quot; title=&quot;[EXPTECH]__How to locate cred&quot;&gt;&lt;/a&gt;[EXPT
     
     </summary>
+    
+      <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
     
     
       <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
