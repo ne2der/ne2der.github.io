@@ -285,6 +285,194 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/Hardening-the-Kernel-in-Android-Oreo/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ne2der">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ne2der">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/Hardening-the-Kernel-in-Android-Oreo/" itemprop="url">Android O 内核加固与缓解机制</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-13T17:09:53+08:00">
+                2017-09-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                
+                  <span class="post-meta-divider">|</span>
+                
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Words count in article</span>
+                
+                <span title="Words count in article">
+                  
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Reading time</span>
+                
+                <span title="Reading time">
+                  
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="0x00"><a href="#0x00" class="headerlink" title="0x00"></a>0x00</h2><p>  本文主要结合代码介绍Android O 引入的新加固与缓解机制的原理与影响，Android官方的介绍请戳<a href="https://android-developers.googleblog.com/2017/08/hardening-kernel-in-android-oreo.html" target="_blank" rel="external">这里</a></p>
+<p>  这次Android引入的内核安全机制主要有：</p>
+<ul>
+<li>PAN</li>
+<li>Hardened usercopy</li>
+<li>Kalsr</li>
+<li>Post-init read-only memory</li>
+</ul>
+<p>下面一个一个介绍的</p>
+<h2 id="0x01"><a href="#0x01" class="headerlink" title="0x01"></a>0x01</h2><h3 id="1-PAN"><a href="#1-PAN" class="headerlink" title="1.PAN"></a>1.PAN</h3><p>   PAN（Privileged Access Never）的主要作用是防止内核任意读取用户态数据，在arm平台引入PXN以后，内核态不能直接执行用户态的代码，这让攻击方利用的漏洞难度变大。目前出现了多种PXN bypass的技术，其中一种就是在用户态伪造内核结构体的方法，在我前面的分析的CVE-2016-2434 poc中就利用了这种方法。可以学习360的spinlock2014 pjf在mosec上的topic<a href="https://github.com/jianqiangzhao/mosec2016/blob/master/Android%20Root%E5%88%A9%E7%94%A8%E6%8A%80%E6%9C%AF%E6%BC%AB%E8%B0%88%EF%BC%9A%E7%BB%95%E8%BF%87PXN.ppt" target="_blank" rel="external">Android Root利用技术漫谈：绕过PXN</a>.<br>这种方法的关键是在用户态创建伪造的很和结构体，并将内核结构体指针指向这个伪造的结构体，内核不需要执行用户态代码，但需要读取用户态数据。PAN则会限制这种行为。</p>
+<hr>
+<p>由于要armv8.1指令集才会支持PAN，所以Android在kernel代码中对armv8.1以下的cpu做了PAN Emulation.下面介绍这两种</p>
+<p>####1.1 PAN (armv8.1)<br>在armv8.1的硬件支持中，系统不需要做什么特别的改动，原理是通过在CPSR寄存其中放一个PAN标志位实现的。在<a href="https://static.docs.arm.com/ddi0557/a/DDI0557A_b_armv8_1_supplement.pdf" target="_blank" rel="external">armv8.1的文档</a>中搜索PAN就可看到实现。<br><img src="/images/farmv81_pan.png" alt="armv8.1_pan.png"></p>
+<p>####1.2 PAN Emulation<br>ARM64:<br>新增了CONFIG_ARM64_SW_TTBR0_PAN选项来配置是否开启PAN，通过uaccess_ttbr0_disable禁止内核态向用户态的访问,原理是将ttbr0寄存器置为0，ttbr0实际上保存的是一级页表的地址，所以ttbr0被置零以后，门存页寻址失败，PAN生效。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_ARM64_SW_TTBR0_PAN</span></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Set the TTBR0 PAN bit in SPSR. When the exception is taken from</div><div class="line">	 * EL0, there is no need to check the state of TTBR0_EL1 since</div><div class="line">	 * accesses are always enabled.</div><div class="line">	 * Note that the meaning of this bit differs from the ARMv8.1 PAN</div><div class="line">	 * feature as all TTBR0_EL1 accesses are disabled, not just those to</div><div class="line">	 * user mappings.</div><div class="line">	 */</div><div class="line">alternative_if_not ARM64_HAS_PAN</div><div class="line">	nop</div><div class="line">alternative_else</div><div class="line">	b	<span class="number">1f</span>				<span class="comment">// skip TTBR0 PAN</span></div><div class="line">alternative_endif</div><div class="line"></div><div class="line">	.<span class="keyword">if</span>	\el != <span class="number">0</span></div><div class="line">	mrs	x21, ttbr0_el1</div><div class="line">	tst	x21, #<span class="number">0xffff</span> &lt;&lt; <span class="number">48</span>		<span class="comment">// Check for the reserved ASID</span></div><div class="line">	orr	x23, x23, #PSR_PAN_BIT		<span class="comment">// Set the emulated PAN in the saved SPSR</span></div><div class="line">	b.eq	<span class="number">1f</span>				<span class="comment">// TTBR0 access already disabled</span></div><div class="line">	<span class="keyword">and</span>	x23, x23, #~PSR_PAN_BIT		<span class="comment">// Clear the emulated PAN in the saved SPSR</span></div><div class="line">	.endif</div><div class="line"></div><div class="line">	uaccess_ttbr0_disable x21</div></pre></td></tr></table></figure></p>
+<p>ARM32:<br>arm32的PAN emulation实现方式不同，是通过设置访问属性实现，这种方法更简单，但是在arm64上性能较差，所以arm64未采用<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_CPU_SW_DOMAIN_PAN</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> DACR_INIT \</span></div><div class="line">	(domain_val(DOMAIN_USER, DOMAIN_NOACCESS) | \</div><div class="line">	 domain_val(DOMAIN_KERNEL, DOMAIN_MANAGER) | \</div><div class="line">	 domain_val(DOMAIN_IO, DOMAIN_CLIENT) | \</div><div class="line">	 domain_val(DOMAIN_VECTORS, DOMAIN_CLIENT))</div></pre></td></tr></table></figure></p>
+<h3 id="2-Hardened-usercopy"><a href="#2-Hardened-usercopy" class="headerlink" title="2.Hardened usercopy"></a>2.Hardened usercopy</h3><p>许多漏洞的原因是程序员书写代码时在copy_<em><em>user时，边界检查不严，比如之前分析的CVE-2016-5342 poc.Hardened usercopy 在copy</em></em>_user函数内部对拷贝的位置和长度进行检测.检测函数check_object_size.<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">unsigned</span> <span class="keyword">long</span> __<span class="function">must_check <span class="title">copy_from_user</span><span class="params">(<span class="keyword">void</span> *to, <span class="keyword">const</span> <span class="keyword">void</span> __user *from, <span class="keyword">unsigned</span> <span class="keyword">long</span> n)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">if</span> (access_ok(VERIFY_READ, from, n)) &#123;</div><div class="line">		check_object_size(to, n, <span class="literal">false</span>);</div><div class="line">		n = __arch_copy_from_user(to, from, n);</div><div class="line">	&#125; <span class="keyword">else</span> <span class="comment">/* security hole - plug it */</span></div><div class="line">		<span class="built_in">memset</span>(to, <span class="number">0</span>, n);</div><div class="line">	<span class="keyword">return</span> n;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">unsigned</span> <span class="keyword">long</span> __<span class="function">must_check <span class="title">copy_to_user</span><span class="params">(<span class="keyword">void</span> __user *to, <span class="keyword">const</span> <span class="keyword">void</span> *from, <span class="keyword">unsigned</span> <span class="keyword">long</span> n)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">if</span> (access_ok(VERIFY_WRITE, to, n)) &#123;</div><div class="line">		check_object_size(from, n, <span class="literal">true</span>);</div><div class="line">		n = __arch_copy_to_user(to, from, n);</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> n;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>check_object_size中最终调用__check_object_size<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> __check_object_size(<span class="keyword">const</span> <span class="keyword">void</span> *ptr, <span class="keyword">unsigned</span> <span class="keyword">long</span> n, <span class="keyword">bool</span> to_user)</div><div class="line">&#123;</div><div class="line">	<span class="keyword">const</span> <span class="keyword">char</span> *err;</div><div class="line"></div><div class="line">	<span class="comment">/* Skip all tests if size is zero. */</span></div><div class="line">	<span class="keyword">if</span> (!n)</div><div class="line">		<span class="keyword">return</span>;</div><div class="line"></div><div class="line">	<span class="comment">/* Check for invalid addresses. */</span></div><div class="line">	err = check_bogus_address(ptr, n);      <span class="comment">//检查目的地址是否有效</span></div><div class="line">	<span class="keyword">if</span> (err)</div><div class="line">		<span class="keyword">goto</span> report;</div><div class="line"></div><div class="line">	<span class="comment">/* Check for bad heap object. */</span></div><div class="line">	err = check_heap_object(ptr, n, to_user);   <span class="comment">//检查是否堆越界</span></div><div class="line">	<span class="keyword">if</span> (err)</div><div class="line">		<span class="keyword">goto</span> report;</div><div class="line"></div><div class="line">	<span class="comment">/* Check for bad stack object. */</span></div><div class="line">	<span class="keyword">switch</span> (check_stack_object(ptr, n)) &#123;      <span class="comment">//检查是否栈越界</span></div><div class="line">	<span class="keyword">case</span> NOT_STACK:</div><div class="line">		<span class="comment">/* Object is not touching the current process stack. */</span></div><div class="line">		<span class="keyword">break</span>;</div><div class="line">	<span class="keyword">case</span> GOOD_FRAME:</div><div class="line">	<span class="keyword">case</span> GOOD_STACK:</div><div class="line">		<span class="comment">/*</span></div><div class="line">		 * Object is either in the correct frame (when it</div><div class="line">		 * is possible to check) or just generally on the</div><div class="line">		 * process stack (when frame checking not available).</div><div class="line">		 */</div><div class="line">		<span class="keyword">return</span>;</div><div class="line">	<span class="keyword">default</span>:</div><div class="line">		err = <span class="string">"&lt;process stack&gt;"</span>;</div><div class="line">		<span class="keyword">goto</span> report;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">/* Check for object in kernel to avoid text exposure. */</span></div><div class="line">	err = check_kernel_text_object(ptr, n);</div><div class="line">	<span class="keyword">if</span> (!err)</div><div class="line">		<span class="keyword">return</span>;</div><div class="line"></div><div class="line">report:</div><div class="line">	report_usercopy(ptr, n, to_user, err);</div><div class="line">&#125;</div><div class="line">EXPORT_SYMBOL(__check_object_size);</div></pre></td></tr></table></figure></p>
+<h3 id="3-Kalsr"><a href="#3-Kalsr" class="headerlink" title="3.Kalsr"></a>3.Kalsr</h3><p>由于目前kernel没有进行随机化，所以在kernel编译好之后所有的内核符号地址都已经固定，之前也分析过如何从kernel中提取符号地址.Android kernel 4.4 版本中加入kalsr.使内核地址随机化.<br>在bootloader启动kernel的时候，会通过FDT向kernel传入一个seed，在kenrel启动的过程中在kaslr_early_init中利用这个seed计算一个random size<br>用这个值来对kernel进行随机化（也就是每次加载的基址会在默认基址上偏移random size）<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_RANDOMIZE_BASE</span></div><div class="line">	tst	x23, ~(MIN_KIMG_ALIGN - <span class="number">1</span>)	<span class="comment">// already running randomized?</span></div><div class="line">	b.ne	<span class="number">0f</span></div><div class="line">	mov	x0, x21				<span class="comment">// pass FDT address in x0</span></div><div class="line">	mov	x1, x23				<span class="comment">// pass modulo offset in x1</span></div><div class="line">	bl	kaslr_early_init		<span class="comment">// parse FDT for KASLR options</span></div><div class="line">	cbz	x0, <span class="number">0f</span>				<span class="comment">// KASLR disabled? just proceed</span></div><div class="line">	orr	x23, x23, x0			<span class="comment">// record KASLR offset</span></div><div class="line">	ret	x28				<span class="comment">// we must enable KASLR, return</span></div><div class="line">						<span class="comment">// to __enable_mmu()</span></div><div class="line"><span class="number">0</span>:</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">	b	start_kernel</div></pre></td></tr></table></figure></p>
+<p>在kaslr_early_init中，获取fdt中的seed，并用seed计算随机化的offset<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div></pre></td><td class="code"><pre><div class="line">u64 __<span class="function">init <span class="title">kaslr_early_init</span><span class="params">(u64 dt_phys, u64 modulo_offset)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">void</span> *fdt;</div><div class="line">	u64 seed, offset, mask, module_range;</div><div class="line">	<span class="keyword">const</span> u8 *cmdline, *str;</div><div class="line">	<span class="keyword">int</span> size;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Set a reasonable default for module_alloc_base in case</div><div class="line">	 * we end up running with module randomization disabled.</div><div class="line">	 */</div><div class="line">	module_alloc_base = (u64)_etext - MODULES_VSIZE;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Try to map the FDT early. If this fails, we simply bail,</div><div class="line">	 * and proceed with KASLR disabled. We will make another</div><div class="line">	 * attempt at mapping the FDT in setup_machine()</div><div class="line">	 */</div><div class="line">	early_fixmap_init();</div><div class="line">	fdt = __fixmap_remap_fdt(dt_phys, &amp;size, PAGE_KERNEL);</div><div class="line">	<span class="keyword">if</span> (!fdt)</div><div class="line">		<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Retrieve (and wipe) the seed from the FDT</div><div class="line">	 */</div><div class="line">	seed = get_kaslr_seed(fdt);      <span class="comment">// 从fdt 中获取seed</span></div><div class="line">	<span class="keyword">if</span> (!seed)</div><div class="line">		<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Check if 'nokaslr' appears on the command line, and</div><div class="line">	 * return 0 if that is the case.</div><div class="line">	 */</div><div class="line">	cmdline = get_cmdline(fdt);</div><div class="line">	str = <span class="built_in">strstr</span>(cmdline, <span class="string">"nokaslr"</span>);</div><div class="line">	<span class="keyword">if</span> (str == cmdline || (str &gt; cmdline &amp;&amp; *(str - <span class="number">1</span>) == <span class="string">' '</span>))</div><div class="line">		<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * OK, so we are proceeding with KASLR enabled. Calculate a suitable</div><div class="line">	 * kernel image offset from the seed. Let's place the kernel in the</div><div class="line">	 * lower half of the VMALLOC area (VA_BITS - 2).</div><div class="line">	 * Even if we could randomize at page granularity for 16k and 64k pages,</div><div class="line">	 * let's always round to 2 MB so we don't interfere with the ability to</div><div class="line">	 * map using contiguous PTEs</div><div class="line">	 */</div><div class="line">     <span class="comment">/* 用高16位进行随机化，并且限制随机化在2M空间以内*/</span></div><div class="line">	mask = ((<span class="number">1U</span>L &lt;&lt; (VA_BITS - <span class="number">2</span>)) - <span class="number">1</span>) &amp; ~(SZ_2M - <span class="number">1</span>);</div><div class="line">	offset = seed &amp; mask;</div><div class="line"></div><div class="line">	<span class="comment">/* use the top 16 bits to randomize the linear region */</span></div><div class="line">	memstart_offset_seed = seed &gt;&gt; <span class="number">48</span>;                              </div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * The kernel Image should not extend across a 1GB/32MB/512MB alignment</div><div class="line">	 * boundary (for 4KB/16KB/64KB granule kernels, respectively). If this</div><div class="line">	 * happens, increase the KASLR offset by the size of the kernel image.</div><div class="line">	 */</div><div class="line">	<span class="keyword">if</span> ((((u64)_text + offset + modulo_offset) &gt;&gt; SWAPPER_TABLE_SHIFT) !=</div><div class="line">	    (((u64)_end + offset + modulo_offset) &gt;&gt; SWAPPER_TABLE_SHIFT))</div><div class="line">		offset = (offset + (u64)(_end - _text)) &amp; mask;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (IS_ENABLED(CONFIG_KASAN))</div><div class="line">		<span class="comment">/*</span></div><div class="line">		 * KASAN does not expect the module region to intersect the</div><div class="line">		 * vmalloc region, since shadow memory is allocated for each</div><div class="line">		 * module at load time, whereas the vmalloc region is shadowed</div><div class="line">		 * by KASAN zero pages. So keep modules out of the vmalloc</div><div class="line">		 * region if KASAN is enabled.</div><div class="line">		 */</div><div class="line">		<span class="keyword">return</span> offset;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (IS_ENABLED(CONFIG_RANDOMIZE_MODULE_REGION_FULL)) &#123;</div><div class="line">		<span class="comment">/*</span></div><div class="line">		 * Randomize the module region independently from the core</div><div class="line">		 * kernel. This prevents modules from leaking any information</div><div class="line">		 * about the address of the kernel itself, but results in</div><div class="line">		 * branches between modules and the core kernel that are</div><div class="line">		 * resolved via PLTs. (Branches between modules will be</div><div class="line">		 * resolved normally.)</div><div class="line">		 */</div><div class="line">		module_range = VMALLOC_END - VMALLOC_START - MODULES_VSIZE;</div><div class="line">		module_alloc_base = VMALLOC_START;</div><div class="line">	&#125; <span class="keyword">else</span> &#123;</div><div class="line">		<span class="comment">/*</span></div><div class="line">		 * Randomize the module region by setting module_alloc_base to</div><div class="line">		 * a PAGE_SIZE multiple in the range [_etext - MODULES_VSIZE,</div><div class="line">		 * _stext) . This guarantees that the resulting region still</div><div class="line">		 * covers [_stext, _etext], and that all relative branches can</div><div class="line">		 * be resolved without veneers.</div><div class="line">		 */</div><div class="line">		module_range = MODULES_VSIZE - (u64)(_etext - _stext);</div><div class="line">		module_alloc_base = (u64)_etext + offset - MODULES_VSIZE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">/* use the lower 21 bits to randomize the base of the module region */</span></div><div class="line">	module_alloc_base += (module_range * (seed &amp; ((<span class="number">1</span> &lt;&lt; <span class="number">21</span>) - <span class="number">1</span>))) &gt;&gt; <span class="number">21</span>;</div><div class="line">	module_alloc_base &amp;= PAGE_MASK;</div><div class="line"></div><div class="line">	<span class="keyword">return</span> offset;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>ps：在kaslr_early_init中，还对内核模块加载的基址进行随机化，防止在模块中泄露内核的地址。并且提供一个CONFIG_RANDOMIZE_MODULE_REGION_FULL选项，用来保证内核模块加载地址与内核加载地址完全无关</p>
+<h3 id="4-Post-init-read-only"><a href="#4-Post-init-read-only" class="headerlink" title="4 Post-init read-only"></a>4 Post-init read-only</h3><p>Post-init read-only 是为了限制利用vdso区域部署shellcode机制的措施，VDSO(Virtual Dynamically-lined Shared Object)是由内核提供的虚拟so，所有程序共享，用于支持快速系统调用，如getcpu，time等时间要求叫高的系统调用. 由于这段空间可写，有的exploit在漏洞利用的过程中，通过patch这段区域中的代码，将自己的shellcode在其中部署并执行.Android上的有一个dirtycow的poc就是利用这种方法提权.更多vdso的利用细节可以查看<a href="http://bbs.pediy.com/thread-220057.htm" target="_blank" rel="external">给shellcode找块福地－ 通过VDSO绕过PXN</a>.<br>post-init read-only机制在这段区域初始化之后将其设置为只读。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/init.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/linkage.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/const.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/page.h&gt;</span></span></div><div class="line"></div><div class="line">	.globl vdso_start, vdso_end</div><div class="line">	.section .rodata  <span class="comment">//设为只读</span></div><div class="line">	.balign PAGE_SIZE</div><div class="line">vdso_start:</div><div class="line">	.incbin <span class="string">"arch/arm64/kernel/vdso/vdso.so"</span></div><div class="line">	.balign PAGE_SIZE</div><div class="line">vdso_end:</div></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/EXPTECH-Extract-Image-from-bootimg/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1431,7 +1619,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-count">7</span>
                 <span class="site-state-item-name">posts</span>
               </a>
             </div>
