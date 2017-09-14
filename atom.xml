@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-09-14T09:12:16.723Z</updated>
+  <updated>2017-09-14T09:23:45.727Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="http://ne2der.github.io/2017/Hardening-the-Kernel-in-Android-Oreo/"/>
     <id>http://ne2der.github.io/2017/Hardening-the-Kernel-in-Android-Oreo/</id>
     <published>2017-09-13T09:09:53.000Z</published>
-    <updated>2017-09-14T09:12:16.723Z</updated>
+    <updated>2017-09-14T09:23:45.727Z</updated>
     
     <content type="html"><![CDATA[<h2 id="0x00"><a href="#0x00" class="headerlink" title="0x00"></a>0x00</h2><p>  本文主要结合代码介绍Android O 引入的新加固与缓解机制的原理与影响，Android官方的介绍请戳<a href="https://android-developers.googleblog.com/2017/08/hardening-kernel-in-android-oreo.html" target="_blank" rel="external">这里</a></p>
 <p>  这次Android引入的内核安全机制主要有：</p>
@@ -102,9 +102,9 @@
       <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
     
     
-      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
-    
       <category term="Android" scheme="http://ne2der.github.io/tags/Android/"/>
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
     
   </entry>
   
@@ -201,9 +201,9 @@
       <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
     
     
-      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
-    
       <category term="Android" scheme="http://ne2der.github.io/tags/Android/"/>
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
     
   </entry>
   
@@ -244,9 +244,9 @@
       <category term="EXPTECH" scheme="http://ne2der.github.io/categories/EXPTECH/"/>
     
     
-      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
-    
       <category term="Android" scheme="http://ne2der.github.io/tags/Android/"/>
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
     
   </entry>
   
