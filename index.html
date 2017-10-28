@@ -285,6 +285,193 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/blueborne-CVE-2017-0785/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ne2der">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ne2der">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/blueborne-CVE-2017-0785/" itemprop="url">blueborne_CVE-2017-0785 分析与调试</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-10-28T09:49:30+08:00">
+                2017-10-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                
+                  <span class="post-meta-divider">|</span>
+                
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Words count in article</span>
+                
+                <span title="Words count in article">
+                  
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Reading time</span>
+                
+                <span title="Reading time">
+                  
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>前段时间特别火的<a href="https://www.armis.com/blueborne/" target="_blank" rel="external">blueborne</a>对于Android影响还是蛮大的，这个系列的漏洞中有三个是在Android系统上，这次分析的是信息泄漏漏洞CVE-2017-0785，这分析的过程中<a href="http://bobao.360.cn/learning/detail/4495.html" target="_blank" rel="external">360的博客</a>和博客中提供的<a href="https://github.com/marsyy/littl_tools/tree/master/bluetooth" target="_blank" rel="external">POC</a>帮助巨大,特别感谢。并且在360的博客中已经对这个漏洞的成因有了比较详细的解释，因此就不在本文中做太详细的分析，本文主要分析我在调试过程中遇到的问题。</p>
+<h2 id="0x01-漏洞简述"><a href="#0x01-漏洞简述" class="headerlink" title="0x01 漏洞简述"></a>0x01 漏洞简述</h2><p>CVE-2017-0785的漏洞代码在Android蓝牙实现中，代码位置 bt/stack/sdp/sdp_server.cc<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">process_service_search</span><span class="params">(tCONN_CB* p_ccb, <span class="keyword">uint16_t</span> trans_num,</span></span></div><div class="line">                                   <span class="keyword">uint16_t</span> param_len, <span class="keyword">uint8_t</span>* p_req,</div><div class="line">                                   UNUSED_ATTR <span class="keyword">uint8_t</span>* p_req_end) &#123;</div><div class="line">  <span class="keyword">uint16_t</span> max_replies, cur_handles, rem_handles, cont_offset;</div><div class="line">  tSDP_UUID_SEQ uid_seq;</div><div class="line">  <span class="keyword">uint8_t</span> *p_rsp, *p_rsp_start, *p_rsp_param_len;</div><div class="line">  <span class="keyword">uint16_t</span> rsp_param_len, num_rsp_handles, xx;</div><div class="line">  <span class="keyword">uint32_t</span> rsp_handles[SDP_MAX_RECORDS] = &#123;<span class="number">0</span>&#125;;</div><div class="line">  tSDP_RECORD* p_rec = <span class="literal">NULL</span>;</div><div class="line">  <span class="keyword">bool</span> is_cont = <span class="literal">false</span>;</div><div class="line"></div><div class="line">  p_req = sdpu_extract_uid_seq(p_req, param_len, &amp;uid_seq);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> ((!p_req) || (!uid_seq.num_uids)) &#123;</div><div class="line">    sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_REQ_SYNTAX,</div><div class="line">                            SDP_TEXT_BAD_UUID_LIST);</div><div class="line">    <span class="keyword">return</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">/* Get the max replies we can send. Cap it at our max anyways. */</span></div><div class="line">  BE_STREAM_TO_UINT16(max_replies, p_req);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> (max_replies &gt; SDP_MAX_RECORDS) max_replies = SDP_MAX_RECORDS;</div><div class="line"></div><div class="line">  <span class="keyword">if</span> ((!p_req) || (p_req &gt; p_req_end)) &#123;</div><div class="line">    sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_REQ_SYNTAX,</div><div class="line">                            SDP_TEXT_BAD_MAX_RECORDS_LIST);</div><div class="line">    <span class="keyword">return</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">/* Get a list of handles that match the UUIDs given to us */</span></div><div class="line">  <span class="keyword">for</span> (num_rsp_handles = <span class="number">0</span>; num_rsp_handles &lt; max_replies;) &#123;</div><div class="line">    p_rec = sdp_db_service_search(p_rec, &amp;uid_seq);</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (p_rec)</div><div class="line">      rsp_handles[num_rsp_handles++] = p_rec-&gt;record_handle;</div><div class="line">    <span class="keyword">else</span></div><div class="line">      <span class="keyword">break</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">/* Check if this is a continuation request */</span></div><div class="line">  <span class="keyword">if</span> (*p_req) &#123;</div><div class="line">    <span class="keyword">if</span> (*p_req++ != SDP_CONTINUATION_LEN || (p_req &gt;= p_req_end)) &#123;</div><div class="line">      sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_CONT_STATE,</div><div class="line">                              SDP_TEXT_BAD_CONT_LEN);</div><div class="line">      <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">    BE_STREAM_TO_UINT16(cont_offset, p_req);</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (cont_offset != p_ccb-&gt;cont_offset) &#123;                        <span class="comment">//1.此处没有校验 cont_offset 与 num_rsp_handles的大小</span></div><div class="line">      sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_CONT_STATE,</div><div class="line">                              SDP_TEXT_BAD_CONT_INX);</div><div class="line">      <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    rem_handles =</div><div class="line">        num_rsp_handles - cont_offset; <span class="comment">/* extract the remaining handles */</span>   <span class="comment">//2.可能导致执行减法的时候发生溢出，rem_handles变成一个大整数</span></div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    rem_handles = num_rsp_handles;</div><div class="line">    cont_offset = <span class="number">0</span>;</div><div class="line">    p_ccb-&gt;cont_offset = <span class="number">0</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">/* Calculate how many handles will fit in one PDU */</span></div><div class="line">  cur_handles =</div><div class="line">      (<span class="keyword">uint16_t</span>)((p_ccb-&gt;rem_mtu_size - SDP_MAX_SERVICE_RSPHDR_LEN) / <span class="number">4</span>);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> (rem_handles &lt;= cur_handles)                            <span class="comment">//3.导致rem_handles &gt; cur_handles 进入else</span></div><div class="line">    cur_handles = rem_handles;</div><div class="line">  <span class="keyword">else</span> <span class="comment">/* Continuation is set */</span></div><div class="line">  &#123;</div><div class="line">    p_ccb-&gt;cont_offset += cur_handles;                       <span class="comment">//4.多次执行后p_ccb-&gt;cont_offset不断加cur_handles，变成一个大值</span></div><div class="line">    is_cont = <span class="literal">true</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">/* Get a buffer to use to build the response */</span></div><div class="line">  BT_HDR* p_buf = (BT_HDR*)osi_malloc(SDP_DATA_BUF_SIZE);</div><div class="line">  p_buf-&gt;offset = L2CAP_MIN_OFFSET;</div><div class="line">  p_rsp = p_rsp_start = (<span class="keyword">uint8_t</span>*)(p_buf + <span class="number">1</span>) + L2CAP_MIN_OFFSET;</div><div class="line"></div><div class="line">  <span class="comment">/* Start building a rsponse */</span></div><div class="line">  UINT8_TO_BE_STREAM(p_rsp, SDP_PDU_SERVICE_SEARCH_RSP);</div><div class="line">  UINT16_TO_BE_STREAM(p_rsp, trans_num);</div><div class="line"></div><div class="line">  <span class="comment">/* Skip the length, we need to add it at the end */</span></div><div class="line">  p_rsp_param_len = p_rsp;</div><div class="line">  p_rsp += <span class="number">2</span>;</div><div class="line"></div><div class="line">  <span class="comment">/* Put in total and current number of handles, and handles themselves */</span></div><div class="line">  UINT16_TO_BE_STREAM(p_rsp, num_rsp_handles);</div><div class="line">  UINT16_TO_BE_STREAM(p_rsp, cur_handles);</div><div class="line"></div><div class="line">  <span class="comment">/*  SDP_TRACE_DEBUG("SDP Service Rsp: tothdl %d, curhdlr %d, start %d, end %d,</span></div><div class="line">     cont %d",</div><div class="line">                       num_rsp_handles, cur_handles, cont_offset,</div><div class="line">                       cont_offset + cur_handles-1, is_cont); */</div><div class="line">  <span class="keyword">for</span> (xx = cont_offset; xx &lt; cont_offset + cur_handles; xx++)  <span class="comment">//5.根据1处的check，其实cont_offset 是与 p_ccb-&gt;cont_offset相等的，那么cont_offset也很大了，因此可以对rsp_handles[SDP_MAX_RECORDS]越界读</span></div><div class="line">    UINT32_TO_BE_STREAM(p_rsp, rsp_handles[xx]);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> (is_cont) &#123;</div><div class="line">    UINT8_TO_BE_STREAM(p_rsp, SDP_CONTINUATION_LEN);</div><div class="line">    UINT16_TO_BE_STREAM(p_rsp, p_ccb-&gt;cont_offset);</div><div class="line">  &#125; <span class="keyword">else</span></div><div class="line">    UINT8_TO_BE_STREAM(p_rsp, <span class="number">0</span>);</div><div class="line"></div><div class="line">  <span class="comment">/* Go back and put the parameter length into the buffer */</span></div><div class="line">  rsp_param_len = p_rsp - p_rsp_param_len - <span class="number">2</span>;</div><div class="line">  UINT16_TO_BE_STREAM(p_rsp_param_len, rsp_param_len);</div><div class="line"></div><div class="line">  <span class="comment">/* Set the length of the SDP data in the buffer */</span></div><div class="line">  p_buf-&gt;len = p_rsp - p_rsp_start;</div><div class="line"></div><div class="line">  <span class="comment">/* Send the buffer through L2CAP */</span></div><div class="line">  L2CA_DataWrite(p_ccb-&gt;connection_id, p_buf);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这个漏洞触发需要蓝牙通信包多次交互，前面360的博客讲的很清楚，这里就不具体分析了。这个漏洞的关键是</p>
+<ul>
+<li>(I) cont_offset是越界读的关键，越界读取发生在5处对rsp_handles的读取</li>
+<li>(II) cont_offset可以被控制，但是有检查，就是1处，因此需要把p_ccb-&gt;cont_offset变大</li>
+<li>(III）每次p_ccb-&gt;cont_offset只会增加cur_handles，cur_handles其实就是代表这个一个包里要发送的handles数量</li>
+<li>(IIII) cur_handles 的值是 min(rem_handles，每个蓝牙包最多能放的handles的数量)，rem_handles是剩余要发送的handles数量</li>
+</ul>
+<h2 id="0x02-漏洞的调试"><a href="#0x02-漏洞的调试" class="headerlink" title="0x02 漏洞的调试"></a>0x02 漏洞的调试</h2><p>漏洞代码对应的so是，bluetooth.default.so,在Android系统中处理蓝牙通信的com.android.bluetooth会加载这个so。因此，IDA远程调试attach到这个进程上去。下面关键的问题就是下断了。我测试用的手机中的bluetooth.default.so没有process_service_search符号，所以我用字符串的方式来查找这个函数的地址。查找process_service_search的上层函数是sdp_server_handle_client_req<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">sdp_server_handle_client_req</span><span class="params">(tCONN_CB* p_ccb, BT_HDR* p_msg)</span> </span>&#123;</div><div class="line">  <span class="keyword">uint8_t</span>* p_req = (<span class="keyword">uint8_t</span>*)(p_msg + <span class="number">1</span>) + p_msg-&gt;offset;</div><div class="line">  <span class="keyword">uint8_t</span>* p_req_end = p_req + p_msg-&gt;len;</div><div class="line">  <span class="keyword">uint8_t</span> pdu_id;</div><div class="line">  <span class="keyword">uint16_t</span> trans_num, param_len;</div><div class="line"></div><div class="line">  <span class="comment">/* Start inactivity timer */</span></div><div class="line">  alarm_set_on_mloop(p_ccb-&gt;sdp_conn_timer, SDP_INACT_TIMEOUT_MS,</div><div class="line">                     sdp_conn_timer_timeout, p_ccb);</div><div class="line"></div><div class="line">  <span class="comment">/* The first byte in the message is the pdu type */</span></div><div class="line">  pdu_id = *p_req++;</div><div class="line"></div><div class="line">  <span class="comment">/* Extract the transaction number and parameter length */</span></div><div class="line">  BE_STREAM_TO_UINT16(trans_num, p_req);</div><div class="line">  BE_STREAM_TO_UINT16(param_len, p_req);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> ((p_req + param_len) != p_req_end) &#123;</div><div class="line">    sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_PDU_SIZE,</div><div class="line">                            SDP_TEXT_BAD_HEADER);</div><div class="line">    <span class="keyword">return</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="keyword">switch</span> (pdu_id) &#123;</div><div class="line">    <span class="keyword">case</span> SDP_PDU_SERVICE_SEARCH_REQ:   <span class="comment">//SDP_PDU_SERVICE_SEARCH_REQ 的值为0x02</span></div><div class="line">      process_service_search(p_ccb, trans_num, param_len, p_req, p_req_end); <span class="comment">//调用漏洞函数</span></div><div class="line">      <span class="keyword">break</span>;</div><div class="line"></div><div class="line">    <span class="keyword">case</span> SDP_PDU_SERVICE_ATTR_REQ:</div><div class="line">      process_service_attr_req(p_ccb, trans_num, param_len, p_req, p_req_end);</div><div class="line">      <span class="keyword">break</span>;</div><div class="line"></div><div class="line">    <span class="keyword">case</span> SDP_PDU_SERVICE_SEARCH_ATTR_REQ:</div><div class="line">      process_service_search_attr_req(p_ccb, trans_num, param_len, p_req,</div><div class="line">                                      p_req_end);</div><div class="line">      <span class="keyword">break</span>;</div><div class="line"></div><div class="line">    <span class="keyword">default</span>:</div><div class="line">      sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_REQ_SYNTAX,</div><div class="line">                              SDP_TEXT_BAD_PDU);</div><div class="line">      SDP_TRACE_WARNING(<span class="string">"SDP - server got unknown PDU: 0x%x"</span>, pdu_id);</div><div class="line">      <span class="keyword">break</span>;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这个函数中有一个特征字符串“SDP - server got unknown PDU: 0x%x”，在IDA中查找到这个字符串，<br><img src="/images/sdpstr.png" alt="sdpstr"><br>再向前查找到判断等于2的的的分支可以找到需要分析的关键函数。<br><img src="/images/process_service_search.png" alt="process_service_search"><br>这里memset就是在对rsp_handles进行清零操作，W1存放的就是rsp_handles的首地址，因此在调试的过程中主要需要关注W1中的数据。<br>ps:由于这里好几个函数存在没有return的分支，导致IDA对函数的识别不是很准，把好几个函数揉在了一起，需要花点时间手工分析一下。</p>
+<h2 id="0x03-POC改进"><a href="#0x03-POC改进" class="headerlink" title="0x03 POC改进"></a>0x03 POC改进</h2><p>我在测试的时候发现在360博客中提供的poc获取的数据有一点小问题，这一部分我解释一下poc，并说一点我的看法。<br>poc的代码并不复杂，大致的过程就是不断发包使p_ccb-&gt;cont_offset的值越来越大，构成越界读</p>
+<p>首先poc通过l2cap_set_mtu设置了包的mtu为48<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">l2cap_set_mtu</span><span class="params">(<span class="keyword">int</span> sock_fd, __le16 imtu, __le32 omtu)</span> </span>&#123;</div><div class="line">	<span class="keyword">int</span> ret;</div><div class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">l2cap_options</span> <span class="title">option_arg</span>;</span></div><div class="line">	<span class="keyword">socklen_t</span> len ;</div><div class="line">	<span class="built_in">memset</span>(&amp;option_arg, <span class="number">0</span> ,<span class="keyword">sizeof</span>(option_arg));</div><div class="line"></div><div class="line">	ret = getsockopt(sock_fd, SOL_L2CAP, L2CAP_OPTIONS, &amp;option_arg, &amp;len);</div><div class="line">	<span class="keyword">if</span>(ret == <span class="number">-1</span>)&#123;</div><div class="line">		perror(<span class="string">"[-]getsockopt failed : "</span>);</div><div class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	option_arg.imtu = imtu;</div><div class="line">	option_arg.omtu = omtu;</div><div class="line"></div><div class="line">	ret = setsockopt(sock_fd, SOL_L2CAP, L2CAP_OPTIONS, &amp;option_arg, <span class="keyword">sizeof</span>(option_arg));</div><div class="line">	<span class="keyword">if</span>(ret == <span class="number">-1</span>)&#123;</div><div class="line">		perror(<span class="string">"[-]setsockopt failed : "</span>);</div><div class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>根据前面android系统中的process_service_search处理代码<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">cur_handles =</div><div class="line">    (<span class="keyword">uint16_t</span>)((p_ccb-&gt;rem_mtu_size - SDP_MAX_SERVICE_RSPHDR_LEN) / <span class="number">4</span>);  <span class="comment">//SDP_MAX_SERVICE_RSPHDR_LEN =12</span></div></pre></td></tr></table></figure></p>
+<p>可以得到一个包里最多可以传送（48-12）/4,即9个handles，解释一下，包的总大小48字节，12个字节用于包自身一些结构数据，因此有36个字节可以用于发送需要发送的handles，handles是uint32类型，每个占4个字节，所以一个包最多可以放9个。</p>
+<p>这12个字节的包结构数据在process_service_search最后构造包的时候可以看到<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">UINT8_TO_BE_STREAM(p_rsp, SDP_PDU_SERVICE_SEARCH_RSP);    <span class="comment">//1字节</span></div><div class="line">UINT16_TO_BE_STREAM(p_rsp, trans_num);                    <span class="comment">//2字节</span></div><div class="line"></div><div class="line"><span class="comment">/* Skip the length, we need to add it at the end */</span></div><div class="line">p_rsp_param_len = p_rsp;</div><div class="line">p_rsp += <span class="number">2</span>;                                               <span class="comment">//2字节</span></div><div class="line"></div><div class="line"><span class="comment">/* Put in total and current number of handles, and handles themselves */</span></div><div class="line">UINT16_TO_BE_STREAM(p_rsp, num_rsp_handles);              <span class="comment">//2字节</span></div><div class="line">UINT16_TO_BE_STREAM(p_rsp, cur_handles);                  <span class="comment">//2字节</span></div><div class="line">.....                                                     <span class="comment">//以上一共9字节 在数据部分前面</span></div><div class="line"><span class="keyword">if</span> (is_cont) &#123;</div><div class="line">  UINT8_TO_BE_STREAM(p_rsp, SDP_CONTINUATION_LEN);         </div><div class="line">  UINT16_TO_BE_STREAM(p_rsp, p_ccb-&gt;cont_offset);           <span class="comment">//在continue包中 后面有1+2=3字节</span></div><div class="line">&#125; <span class="keyword">else</span></div><div class="line">  UINT8_TO_BE_STREAM(p_rsp, <span class="number">0</span>);                             <span class="comment">//否则只有1字节</span></div><div class="line">..........                                                  <span class="comment">//在泄露数据的过程中是使用的continue的包 所以一共12字节</span></div></pre></td></tr></table></figure></p>
+<p>因此，来查看poc中处理接收数据的部分，我认为有一些不合理<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">append_leak_data</span><span class="params">(<span class="keyword">void</span> *recv_buf, <span class="keyword">int</span> recv_size)</span> </span>&#123;</div><div class="line">	<span class="keyword">if</span>(recv_size &lt; <span class="number">0x15</span>)</div><div class="line">		<span class="keyword">return</span>;</div><div class="line">	<span class="built_in">memcpy</span>(leak_data + leak_count, recv_buf + <span class="number">0x12</span>, recv_size - <span class="number">0x12</span> - <span class="number">0x3</span>);</div><div class="line">	leak_count += recv_size - <span class="number">0x12</span> - <span class="number">0x3</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这个地方将接收到的数据偏移12的位置，拷贝了recv_size-12-3的数据出来，实际上根据上面的分析，包结构数据前面9字节后面3字节，一共12。应该改为如下代码更为合理<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="built_in">memcpy</span>(leak_data + leak_count, recv_buf + <span class="number">0x9</span>, recv_size - <span class="number">0x9</span> - <span class="number">0x3</span>);</div><div class="line">leak_count += recv_size - <span class="number">0x9</span> - <span class="number">0x3</span>;</div></pre></td></tr></table></figure></p>
+<p>最后，用改动过的poc结合前面的调试，测试读取出来的内存数据。<br>首先通过W1确定rsp_handles的地址是0x0000006FF324B5A0，位于当前栈上<br><img src="/images/w1.png" alt="w1"></p>
+<p>在最后一次发送之前查看0x0000006FF324B5A0后面的数据<br><img src="/images/stack.png" alt="stack"></p>
+<p>获取到的数据打印结果如图<br><img src="/images/0785_res.png" alt="0785_res"><br>因为没有进行字节序的转换，所以数据显示上不太一致，可以看出图中红框中的内容就是栈中0x0000006FF324B618地址处数据字节序转换后的样子。<br>事实上在process_service_search中的UINT*_TO_BE_STREAM中就进行了字节序转换，只要进行一下转换就可以了。测试读取了100个字节，已经可以拿到libc和bluetooth.default.so中符号的地址，因为alsr的偏移是针对模块的，也就意味着，在知道机型系统版本的情况下这两个模块其他符号的地址也可以确定了。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://ne2der.github.io/2017/Hardening-the-Kernel-in-Android-Oreo/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1618,7 +1805,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">8</span>
                 <span class="site-state-item-name">posts</span>
               </a>
             </div>
