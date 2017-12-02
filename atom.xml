@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-10-28T06:24:29.241Z</updated>
+  <updated>2017-12-02T04:07:08.473Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -14,6 +14,53 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Huge Dirty COW(CVE-2017–1000405)</title>
+    <link href="http://ne2der.github.io/2017/HugeDirtyCOW-CVE-2017%E2%80%931000405/"/>
+    <id>http://ne2der.github.io/2017/HugeDirtyCOW-CVE-2017–1000405/</id>
+    <published>2017-12-02T02:50:01.000Z</published>
+    <updated>2017-12-02T04:07:08.473Z</updated>
+    
+    <content type="html"><![CDATA[<p>Dirtycow可以说是去年的明星漏洞之一，上个月又出来一个Huge Dirty COW，看到心里一惊，这个怕是要出大事情。新漏洞相关连接：</p>
+<ul>
+<li><a href="https://medium.com/bindecy/huge-dirty-cow-cve-2017-1000405-110eca132de0" target="_blank" rel="external">Reporter blog</a></li>
+<li><a href="https://github.com/torvalds/linux/commit/a8f97366452ed491d13cf1e44241bc0b5740b1f0#diff-ff0276c422430aff67678952b177fe3d" target="_blank" rel="external">Patch</a></li>
+<li><a href="https://github.com/bindecy/HugeDirtyCowPOC" target="_blank" rel="external">POC</a></li>
+</ul>
+<p>这个漏洞与去年的DirtyCow的原理和Patch相关，可以先了解下Dirtycow的相关内容</p>
+<p>Dirtycow利用的关键在于移除掉FOLL_WRITE标志之后再请求页面是，系统分配页面不会再进入COW循环而是直接返回原始页面，导致可以向不可写的页面执行写操作。因此在dirtycow的patch（如下part1）中去不再移除FOLL_WRITE位，而是增加一个FOLL_COW位，用FOLL_COW表示已经COW过。</p>
+<p>dirtycow patch part1<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ((ret &amp; VM_FAULT_WRITE) &amp;&amp; !(vma-&gt;vm_flags &amp; VM_WRITE))</div><div class="line">-    *flags &amp;= ~FOLL_WRITE;</div><div class="line">+    *flags |= FOLL_COW;</div></pre></td></tr></table></figure></p>
+<p>然后再新增一个函数（如下part2）can_follow_write_pte判断是否可以写，只两种情况可写</p>
+<ul>
+<li>1.pte可写</li>
+<li>2.有FOLL_FORCE和FOLL_COW标志，并且pte标记为脏（已经COW过，并且写的是脏页）</li>
+</ul>
+<p>dirtycow patch part2<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/*</span></div><div class="line"> * FOLL_FORCE can write to even unwritable pte's, but only</div><div class="line"> * after we've gone through a COW cycle and they are dirty.</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">bool</span> <span class="title">can_follow_write_pte</span><span class="params">(<span class="keyword">pte_t</span> pte, <span class="keyword">unsigned</span> <span class="keyword">int</span> flags)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">return</span> pte_write(pte) ||</div><div class="line">       ((flags &amp; FOLL_FORCE) &amp;&amp; (flags &amp; FOLL_COW) &amp;&amp; pte_dirty(pte));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这样的情况下，如果页是private那只有带有FOLL_FORCE和FOLL_COW标志，并且页是脏页的情况是可写的。</p>
+<p>但是在分配THP（Transparent Huge Pages）的过程中，大PMD页直接被设为脏页。</p>
+<p>mm/huge_memory.c<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">touch_pmd</span><span class="params">(struct vm_area_struct *vma, <span class="keyword">unsigned</span> <span class="keyword">long</span> addr,</span></span></div><div class="line">        <span class="keyword">pmd_t</span> *pmd)</div><div class="line">&#123;</div><div class="line">    <span class="keyword">pmd_t</span> _pmd;</div><div class="line"> </div><div class="line">    <span class="comment">/*</span></div><div class="line">     * We should set the dirty bit only for FOLL_WRITE but for now</div><div class="line">     * the dirty bit in the pmd is meaningless.  And if the dirty</div><div class="line">     * bit will become meaningful and we'll only set it with</div><div class="line">     * FOLL_WRITE, an atomic set_bit will be required on the pmd to</div><div class="line">     * set the young bit, instead of the current set_pmd_at.</div><div class="line">     */</div><div class="line">    _pmd = pmd_mkyoung(pmd_mkdirty(*pmd));</div><div class="line">    <span class="keyword">if</span> (pmdp_set_access_flags(vma, addr &amp; HPAGE_PMD_MASK,</div><div class="line">                pmd, _pmd,  <span class="number">1</span>))</div><div class="line">        update_mmu_cache_pmd(vma, addr, pmd);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>与Dirtycow相同，同样是在__get_user_pages过程中<br>调用链<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">__get_user_pages</div><div class="line">    -&gt;follow_page_mask</div><div class="line">        -&gt;follow_p4d_mask</div><div class="line">            -&gt;follow_pud_mask</div><div class="line">                -&gt;follow_pmd_mask</div><div class="line">                    -&gt;follow_devmap_pmd</div><div class="line">                        -&gt;touch_pmd</div></pre></td></tr></table></figure></p>
+<p>经过这个过程可以获得一个标记为脏的页面，并且是未COW的，剩下的就是要获取FOLL_FORCE和FOLL_COW标志了。这个过程可以类似dirtyCOW的利用的方式。</p>
+<p>因此这个漏洞利用的思路如下：<br>1.首先经过COW循环，获取到FOLL_COW标志<br>2.用madvise干掉脏页<br>3.再次获取页将直接标记为脏<br>4.写入</p>
+<p>总结：<br>这个漏洞虽相对dirtycow影响还是小一些，因为THP的使用有一定限制，并且我看到的Android上并未启用THP（再android内核的源码中甚至没有touch_pmd），所以对Android的几乎没有影响。</p>
+<p>成文仓促，有不正确的地方请不吝指正。</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;Dirtycow可以说是去年的明星漏洞之一，上个月又出来一个Huge Dirty COW，看到心里一惊，这个怕是要出大事情。新漏洞相关连接：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://medium.com/bindecy/huge-dirty-cow-cv
+    
+    </summary>
+    
+    
+      <category term="CVE" scheme="http://ne2der.github.io/tags/CVE/"/>
+    
+      <category term="EXP" scheme="http://ne2der.github.io/tags/EXP/"/>
+    
+  </entry>
   
   <entry>
     <title>blueborne_CVE-2017-0785 分析与调试</title>
