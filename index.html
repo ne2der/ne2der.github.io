@@ -393,7 +393,7 @@
 <li><a href="https://github.com/bindecy/HugeDirtyCowPOC" target="_blank" rel="external">POC</a></li>
 </ul>
 <p>这个漏洞与去年的DirtyCow的原理和Patch相关，可以先了解下Dirtycow的相关内容</p>
-<p>Dirtycow利用的关键在于移除掉FOLL_WRITE标志之后再请求页面是，系统分配页面不会再进入COW循环而是直接返回原始页面，导致可以向不可写的页面执行写操作。因此在dirtycow的patch（如下part1）中去不再移除FOLL_WRITE位，而是增加一个FOLL_COW位，用FOLL_COW表示已经COW过。</p>
+<p>Dirtycow利用的关键在于移除掉FOLL_WRITE标志之后再请求页面时，系统分配页面不会再进入COW循环而是直接返回原始页面，导致可以向不可写的页面执行写操作。因此在dirtycow的patch（如下part1）中去不再移除FOLL_WRITE位，而是增加一个FOLL_COW位，用FOLL_COW表示已经COW过。</p>
 <p>dirtycow patch part1<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ((ret &amp; VM_FAULT_WRITE) &amp;&amp; !(vma-&gt;vm_flags &amp; VM_WRITE))</div><div class="line">-    *flags &amp;= ~FOLL_WRITE;</div><div class="line">+    *flags |= FOLL_COW;</div></pre></td></tr></table></figure></p>
 <p>然后再新增一个函数（如下part2）can_follow_write_pte判断是否可以写，只两种情况可写</p>
 <ul>
