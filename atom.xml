@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ne2der.github.io/"/>
-  <updated>2017-12-02T04:10:24.292Z</updated>
+  <updated>2017-12-04T01:14:25.838Z</updated>
   <id>http://ne2der.github.io/</id>
   
   <author>
@@ -16,11 +16,11 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Huge Dirty COW(CVE-2017–1000405)</title>
+    <title>Huge Dirty COW(CVE-2017-1000405)</title>
     <link href="http://ne2der.github.io/2017/HugeDirtyCOW-CVE-2017%E2%80%931000405/"/>
     <id>http://ne2der.github.io/2017/HugeDirtyCOW-CVE-2017–1000405/</id>
     <published>2017-12-02T02:50:01.000Z</published>
-    <updated>2017-12-02T04:10:24.292Z</updated>
+    <updated>2017-12-04T01:14:25.838Z</updated>
     
     <content type="html"><![CDATA[<p>Dirtycow可以说是去年的明星漏洞之一，上个月又出来一个Huge Dirty COW，看到心里一惊，这个怕是要出大事情。新漏洞相关连接：</p>
 <ul>
